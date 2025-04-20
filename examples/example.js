@@ -1,4 +1,4 @@
-import { Launcher, Downloader } from "./components/Handler";
+import { Launcher, Downloader } from "../components/Handler";
 const downloader = new Downloader()
 const launcher = new Launcher()
 

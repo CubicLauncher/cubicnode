@@ -28,7 +28,7 @@ const { Downloader } = require('cubic-neutron');
 
 const downloader = new Downloader({
     version: '1.20.1',
-    path: './minecraft'
+    gameDirectory: './minecraft'
 });
 
 downloader.download().then(() => {
@@ -44,7 +44,7 @@ const { Launcher } = require('cubic-neutron');
 const launcher = new Launcher({
     version: '1.20.1',
     username: 'Jugador',
-    path: './minecraft'
+    gameDirectory: './minecraft'
 });
 
 launcher.launch().then(() => {

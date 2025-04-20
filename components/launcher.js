@@ -99,6 +99,21 @@ class Launcher {
     this.emisor.on(event, callback);
   }
 
+  // Añadir este nuevo método para manejar argumentos legacy
+  #getLegacyArguments(version, username, rootPath, uuid) {
+    return [
+      '--username', username,
+      '--version', version,
+      '--gameDir', rootPath,
+      '--assetsDir', path.resolve(rootPath, this.downloader.assets),
+      '--assetIndex', version,
+      '--uuid', uuid,
+      '--accessToken', '0', // Token offline para versiones legacy
+      '--userProperties', '{}',
+      '--userType', 'legacy'
+    ];
+  }
+
   /**
    * Método para lanzar el juego Minecraft.
    * @param {Object} options - Opciones de lanzamiento del juego.
@@ -136,21 +151,33 @@ class Launcher {
     let mainClass = file.mainClass;
     let gameArgs;
 
-    // Si es 1.16.5 forzamos parámetros clásicos offline
-    if (version === '1.16.5') {
+    // Modificar la sección de argumentos para incluir soporte legacy
+    const versionNumber = parseFloat(version.split('.')[1]);
+    
+    if (versionNumber <= 9) {
+      // Usar argumentos legacy para versiones 1.9 y anteriores
+      gameArgs = this.#getLegacyArguments(version, username, rootPath, uuid);
+      // Forzar Java 8 para versiones antiguas
+      if (!java8) {
+        java = 'C:/Program Files/Java/jre1.8.0_451/bin/java.exe';
+        this.emisor.emit('debug', 'USANDO JAVA 8 PARA VERSION LEGACY');
+      }
+    } else if (version === '1.16.5') {
+      // Mantener el caso especial para 1.16.5
       gameArgs = [
-        '--username',      username,
-        '--version',       version,
-        '--gameDir',       rootPath,
-        '--assetsDir',     path.resolve(rootPath, this.downloader.assets),
-        '--assetIndex',    version,
-        '--uuid',          uuid,
-        '--xuid',          uuid,
-        '--accessToken',   uuid,
-        '--userType',      'offline',
-        '--userProperties','{}'
+        '--username', username,
+        '--version', version,
+        '--gameDir', rootPath,
+        '--assetsDir', path.resolve(rootPath, this.downloader.assets),
+        '--assetIndex', version,
+        '--uuid', uuid,
+        '--xuid', uuid,
+        '--accessToken', uuid,
+        '--userType', 'offline',
+        '--userProperties', '{}'
       ];
     } else {
+      // Mantener la lógica existente para otras versiones
       gameArgs = file.minecraftArguments
         ? file.minecraftArguments.split(' ')
         : file.arguments.game;

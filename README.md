@@ -25,31 +25,27 @@ npm install cubic-neutron
 
 ```javascript
 const { Downloader } = require('cubic-neutron');
+const downloader = new Downloader()
 
-const downloader = new Downloader({
-    version: '1.20.1',
-    gameDirectory: './minecraft'
-});
-
-downloader.download().then(() => {
-    console.log('¡Minecraft descargado exitosamente!');
-});
+downloader.download('1.16.5', './minecraft')
 ```
 
 ### Lanzar Minecraft
 
 ```javascript
 const { Launcher } = require('cubic-neutron');
-
-const launcher = new Launcher({
-    version: '1.20.1',
-    username: 'Jugador',
-    gameDirectory: './minecraft'
-});
-
-launcher.launch().then(() => {
-    console.log('¡Minecraft iniciado!');
-});
+const launcher = new Launcher()
+launcher.launch({
+    username: 'username', // NOMBRE  USUARIO,
+    version: '1.16.5', // VERSION DE JUEGO - Varía dependiendo de la instalación.
+    type: 'vanilla', // neoforge - optifine - fabric
+    gameDirectory: './minecraft', // RUTA DE JUEGO
+    memory: {
+        min: '2G', // MINIMO DE MEMORIA PARA USAR
+        max: '6G', // MAXIMO DE MEMORIA PARA USAR
+    },
+    java: 'C:/Program Files/Java/jre1.8.0_451/bin/java.exe',
+})
 ```
 
 ## 🔧 Configuración

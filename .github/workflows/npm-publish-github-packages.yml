@@ -19,7 +19,6 @@ jobs:
 
     - name: Install dependencies and verify
       run: |
-        npm ci
         npm audit signatures
 
     - name: Publish package to npm

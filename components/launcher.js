@@ -1,3 +1,7 @@
+/*! Cubic Neutron
+ * ©2025 Cubic Neutron - https://github.com/CubicLauncher
+*/
+
 import fs from 'fs';
 import { spawn } from 'child_process';
 import path from 'path';

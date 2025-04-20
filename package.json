@@ -1,0 +1,30 @@
+{
+  "name": "cubic-neutron",
+  "version": "0.0.2",
+  "description": "Un módulo que permite la descarga y la ejecución de minecraft java con node.js",
+  "keywords": [
+    "minecraft",
+    "minecraft-launcher",
+    "minecraft-node",
+    "minecraft-core",
+    "javascript",
+    "node",
+    "nodejs",
+    "minecraft-launcher-core",
+    "optifine",
+    "forge",
+    "fabric"
+  ],
+  "license": "MIT",
+  "author": "Santiagolxx",
+  "main": "components/Handler.js",
+  "homepage": "https://github.com/CubicLauncher/neutron",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CubicLauncher/neutron"
+  },
+  "dependencies": {
+    "adm-zip": "^0.5.10",
+    "uuid": "^9.0.1"
+  }
+}

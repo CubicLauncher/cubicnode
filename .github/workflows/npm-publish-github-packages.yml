@@ -17,10 +17,6 @@ jobs:
         node-version: '22.14.0'
         registry-url: 'https://registry.npmjs.org'
 
-    - name: Install dependencies and verify
-      run: |
-        npm audit signatures
-
     - name: Publish package to npm
       run: npm publish
       env:

@@ -11,7 +11,7 @@ Un módulo Node.js que permite la descarga y ejecución de Minecraft Java Editio
 - Soporte para diferentes versiones de Minecraft
 - Integración con Optifine, Forge y Fabric
 - Gestión de perfiles de usuario
-- Interfaz simple y fácil de usar
+- simple y fácil de usar
 
 ## 🚀 Instalación
 
@@ -67,7 +67,7 @@ launcher.launch().then(() => {
 - `version`: Versión de Minecraft a ejecutar
 - `username`: Nombre de usuario
 - `path`: Ruta donde están los archivos de Minecraft
-- `javaPath`: Ruta al ejecutable de Java (opcional)
+- `javaPath`: Ruta al ejecutable de Java (opcional)    
 - `memory`: Memoria RAM asignada (opcional)
 
 ## 🤝 Contribuir

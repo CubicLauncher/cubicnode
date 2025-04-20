@@ -4,6 +4,7 @@ import path from 'path'; // Módulo para trabajar con rutas de archivos y direct
 import Downloader from './downloader.js'; // Módulo de descarga personalizado (con extensión .js)
 import { v4 as uuidv4 } from 'uuid'; // Módulo para generar UUID
 import EventEmitter from 'events'; // Módulo para emitir eventos
+import crypto from 'node:crypto'
 
 /**
  * Clase Launcher para gestionar el lanzamiento de Minecraft.
@@ -70,7 +71,6 @@ class Launcher {
    * @returns {String} - UUID del usuario.
    */
   #auth(root, us) {
-    const crypto = require('crypto');
     const hash = crypto.createHash('md5').update(us).digest('hex');
     return hash.substring(0, 8) + '-' + 
            hash.substring(8, 12) + '-' + 

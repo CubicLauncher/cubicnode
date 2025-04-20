@@ -5,7 +5,6 @@ import { EventEmitter } from 'events';
 import AdmZip from 'adm-zip';
 import { Readable } from 'stream';
 
-// Set for tracking already shown download percentages
 const shownNumbers = new Set();
 
 class Downloader {
@@ -29,20 +28,13 @@ class Downloader {
 
       return new Promise((resolve, reject) => {
         const file = createWriteStream(filePath);
-        
+
         fetch(url, { signal: AbortSignal.timeout(10000) })
           .then(response => {
-            if (!response.ok) {
-              throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-            
-            // Convert fetch stream to Node.js stream
+            if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
             Readable.fromWeb(response.body).pipe(file);
-            
-            file.on('finish', () => {
-              file.close(() => resolve());
-            });
-            
+
+            file.on('finish', () => file.close(() => resolve()));
             file.on('error', err => {
               file.close();
               reject(err);
@@ -63,21 +55,22 @@ class Downloader {
     return new Promise((resolve, reject) => {
       fetch(this.url.meta)
         .then(response => {
-          if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
-          }
+          if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
           return response.json();
         })
         .then(data => {
           switch (type) {
-            case "vanilla":
-              resolve(data.versions.filter(x => x.type === "release"));
+            case 'vanilla':
+              resolve(data.versions.filter(x => x.type === 'release'));
               break;
-            case "snapshot":
-              resolve(data.versions.filter(x => x.type === "snapshot"));
+            case 'snapshot':
+              resolve(data.versions.filter(x => x.type === 'snapshot'));
+              break;
+            case 'old_alpha':
+              resolve(data.versions.filter(x => x.type === 'old_alpha'));
               break;
             default:
-              reject(new Error("Error retrieving available versions."));
+              reject(new Error("Tipo de versión no válido. Usa 'vanilla', 'snapshot' o 'old_alpha'."));
           }
         })
         .catch(reject);
@@ -94,9 +87,12 @@ class Downloader {
 
     const manifestData = await fs.readFile(path.join(cacheDir, 'version_manifest.json'), 'utf-8');
     const manifest = JSON.parse(manifestData);
-    const versionInfo = manifest.versions.find(x => x.type === 'release' && x.id === this.version);
+    const versionInfo = manifest.versions.find(x => x.id === this.version);
 
-    if (!versionInfo) throw new Error("Version does not exist.");
+    if (!versionInfo) {
+      const available = manifest.versions.slice(0, 10).map(v => v.id).join(', ');
+      throw new Error(`La versión "${this.version}" no existe. Algunas versiones disponibles: ${available}...`);
+    }
 
     const versionDir = path.join(this.root, this.versions, this.version);
     await fs.mkdir(versionDir, { recursive: true });

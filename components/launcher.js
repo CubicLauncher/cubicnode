@@ -1,26 +1,50 @@
-import fs from 'fs'; // Módulo para trabajar con el sistema de archivos
-import { spawn } from 'child_process'; // Módulo para crear procesos secundarios
-import path from 'path'; // Módulo para trabajar con rutas de archivos y directorios
-import Downloader from './downloader.js'; // Módulo de descarga personalizado (con extensión .js)
-import { v4 as uuidv4 } from 'uuid'; // Módulo para generar UUID
-import EventEmitter from 'events'; // Módulo para emitir eventos
-import crypto from 'node:crypto'
+import fs from 'fs';
+import { spawn } from 'child_process';
+import path from 'path';
+import Downloader from './downloader.js';
+import { v4 as uuidv4 } from 'uuid';
+import EventEmitter from 'events';
+import crypto from 'node:crypto';
 
-/**
- * Clase Launcher para gestionar el lanzamiento de Minecraft.
- */
+class MinecraftInstance {
+  constructor(process) {
+    this.process = process;
+  }
+
+  kill() {
+    this.process.kill();
+  }
+
+  getPid() {
+    return this.process.pid;
+  }
+
+  onOutput(callback) {
+    this.process.stdout.on('data', (data) =>
+      callback(data.toString().trim())
+    );
+    this.process.stderr.on('data', (data) =>
+      callback(data.toString().trim())
+    );
+  }
+
+  onClose(callback) {
+    this.process.on('close', callback);
+  }
+
+  write(input) {
+    if (this.process.stdin.writable) {
+      this.process.stdin.write(input);
+    }
+  }
+}
+
 class Launcher {
   constructor() {
-    // Importa funciones personalizadas
     this.downloader = new Downloader(this);
-    // Define el emisor de eventos
     this.emisor = new EventEmitter();
   }
 
-  /**
-   * Método para crear el perfil de lanzamiento si no existe.
-   * @param {String} root - Ruta del directorio raíz del juego.
-   */
   #createProfile(root) {
     if (!fs.existsSync(path.resolve(root, 'launcher_profiles.json'))) {
       fs.writeFileSync(
@@ -30,13 +54,6 @@ class Launcher {
     }
   }
 
-  /**
-   * Método para encontrar archivos JAR en un directorio y subdirectorios.
-   * @param {String} directorio - Directorio a explorar.
-   * @param {Array} files - Lista de archivos a buscar.
-   * @param {String} ver - Versión de Minecraft.
-   * @returns {String} - Cadena de archivos JAR encontrados.
-   */
   #getJarFiles(directorio, files, ver) {
     const archivos = fs.readdirSync(directorio);
     let archivosJARString = '';
@@ -64,60 +81,25 @@ class Launcher {
     return archivosJARString;
   }
 
-  /**
-   * Método para autenticar al usuario y obtener su UUID.
-   * @param {String} root - Ruta del directorio raíz del juego.
-   * @param {String} us - Nombre de usuario.
-   * @returns {String} - UUID del usuario.
-   */
   #auth(root, us) {
     const hash = crypto.createHash('md5').update(us).digest('hex');
-    return hash.substring(0, 8) + '-' + 
-           hash.substring(8, 12) + '-' + 
-           hash.substring(12, 16) + '-' + 
-           hash.substring(16, 20) + '-' + 
-           hash.substring(20);
+    return (
+      hash.substring(0, 8) +
+      '-' +
+      hash.substring(8, 12) +
+      '-' +
+      hash.substring(12, 16) +
+      '-' +
+      hash.substring(16, 20) +
+      '-' +
+      hash.substring(20)
+    );
   }
 
-  /**
-   * Emite el evento
-   * @param {String} event - Nombre del evento
-   * @param {String} args - Argumentos que se pasarán al evento
-   * @return {String} - Data del evento
-   */
-  emisor(event, args) {
-    this.emisor.emit(event, ...args);
-  }
-
-  /**
-   * Escucha el evento
-   * @param {String} event - Nombre del evento
-   * @param {String} callback - Función personalizada
-   * @return {String} - Data del evento
-   */
   on(event, callback) {
     this.emisor.on(event, callback);
   }
 
-  // Añadir este nuevo método para manejar argumentos legacy
-  #getLegacyArguments(version, username, rootPath, uuid) {
-    return [
-      '--username', username,
-      '--version', version,
-      '--gameDir', rootPath,
-      '--assetsDir', path.resolve(rootPath, this.downloader.assets),
-      '--assetIndex', version,
-      '--uuid', uuid,
-      '--accessToken', '0', // Token offline para versiones legacy
-      '--userProperties', '{}',
-      '--userType', 'legacy'
-    ];
-  }
-
-  /**
-   * Método para lanzar el juego Minecraft.
-   * @param {Object} options - Opciones de lanzamiento del juego.
-   */
   async launch(options) {
     const minM = options.memory.min;
     const maxM = options.memory.max;
@@ -128,7 +110,6 @@ class Launcher {
     let java = options.java;
     let java8 = options.java8;
 
-    // Leer JSON de la versión base
     const file = JSON.parse(
       fs.readFileSync(
         path.resolve(rootPath, this.downloader.versions, version, `${version}.json`),
@@ -136,54 +117,28 @@ class Launcher {
       )
     );
 
-    // Asegurar perfil
     await this.#createProfile(rootPath);
 
-    // Generar UUID offline
     const uuid = this.#auth(rootPath, username);
 
-    // Obtener lista de librerías requeridas
     const reqLibs = file.libraries
       .filter((e) => e.downloads && e.downloads.artifact)
       .map((e) => path.basename(e.downloads.artifact.path));
 
-    // Clase principal y argumentos por defecto
     let mainClass = file.mainClass;
-    let gameArgs;
 
-    // Modificar la sección de argumentos para incluir soporte legacy
-    const versionNumber = parseFloat(version.split('.')[1]);
-    
-    if (versionNumber <= 9) {
-      // Usar argumentos legacy para versiones 1.9 y anteriores
-      gameArgs = this.#getLegacyArguments(version, username, rootPath, uuid);
-      // Forzar Java 8 para versiones antiguas
-      if (!java8) {
-        java = 'C:/Program Files/Java/jre1.8.0_451/bin/java.exe';
-        this.emisor.emit('debug', 'USANDO JAVA 8 PARA VERSION LEGACY');
-      }
-    } else if (version === '1.16.5') {
-      // Mantener el caso especial para 1.16.5
-      gameArgs = [
-        '--username', username,
-        '--version', version,
-        '--gameDir', rootPath,
-        '--assetsDir', path.resolve(rootPath, this.downloader.assets),
-        '--assetIndex', version,
-        '--uuid', uuid,
-        '--xuid', uuid,
-        '--accessToken', uuid,
-        '--userType', 'offline',
-        '--userProperties', '{}'
-      ];
-    } else {
-      // Mantener la lógica existente para otras versiones
-      gameArgs = file.minecraftArguments
-        ? file.minecraftArguments.split(' ')
-        : file.arguments.game;
-    }
+    let gameArgs = [
+      '--username', username,
+      '--version', version,
+      '--gameDir', rootPath,
+      '--assetsDir', path.resolve(rootPath, this.downloader.assets),
+      '--assetIndex', version,
+      '--uuid', uuid,
+      '--accessToken', uuid,
+      '--userType', 'offline',
+      '--userProperties', JSON.stringify({})
+    ];
 
-    // Configuración JVM básica
     let jvm = [
       `-Djava.library.path=${path.resolve(rootPath, this.downloader.natives, version)}`,
       `-Xmx${maxM}`,
@@ -196,7 +151,6 @@ class Launcher {
       '-Dminecraft.api.services.host=https://invalid.invalid'
     ];
 
-    // Si hay versión personalizada (mods, forges, etc.)
     if (custom) {
       const customFile = JSON.parse(
         fs.readFileSync(
@@ -204,20 +158,26 @@ class Launcher {
           { encoding: 'utf-8' }
         )
       );
+
       customFile.libraries.forEach((e) => {
         reqLibs.push(e.name.split(':').slice(-2).join('-') + '.jar');
       });
+
       mainClass = customFile.mainClass;
+
       if (!customFile.arguments) {
         gameArgs = customFile.minecraftArguments.split(' ');
       } else {
         if (customFile.arguments.jvm) jvm.push(...customFile.arguments.jvm);
-        gameArgs.push(...customFile.arguments.game);
+        gameArgs.push(...customFile.arguments.game.flatMap((arg) =>
+          typeof arg === 'string' ? [arg] : arg.value
+        ));
       }
+
       if (fs.existsSync(path.resolve(rootPath, 'options.txt'))) {
         fs.unlinkSync(path.resolve(rootPath, 'options.txt'));
       }
-      // Ejemplo de forge en 1.20
+
       if (custom.includes('forge') && version.startsWith('1.20')) {
         const m = custom.split('-');
         const fv = m[m.length - 1].replace('forge', '');
@@ -225,63 +185,67 @@ class Launcher {
           `forge-${version}-${fv}-universal.jar`,
           `forge-${version}-${fv}-client.jar`
         );
-        if (['1.20','1.20.1'].includes(version)) reqLibs.push('mergetool-1.1.5-api.jar');
+        if (['1.20', '1.20.1'].includes(version)) reqLibs.push('mergetool-1.1.5-api.jar');
       }
     }
 
-    // Construir classpath con librerías encontradas
     let libs = this.#getJarFiles(
       path.resolve(rootPath, this.downloader.libraries),
       reqLibs,
       version
     );
+
     libs += path.resolve(rootPath, this.downloader.versions, version, `${version}.jar`);
 
-    // Mapeo de placeholders a valores offline
     const fields = {
       auth_access_token: uuid,
-      auth_session:      uuid,
-      auth_player_name:  username,
-      auth_uuid:         uuid,
-      auth_xuid:         uuid,
-      user_properties:   '{}',
-      user_type:         'offline',
-      version_name:      version,
+      auth_session: uuid,
+      auth_player_name: username,
+      auth_uuid: uuid,
+      user_properties: JSON.stringify({}),
+      user_type: 'offline',
+      version_name: version,
       assets_index_name: version,
-      game_directory:    path.resolve(rootPath),
-      assets_root:       path.resolve(rootPath, this.downloader.assets),
-      game_assets:       path.resolve(rootPath, this.downloader.assets),
-      version_type:      'release',
-      clientid:          uuid,
-      resolution_width:  856,
+      game_directory: path.resolve(rootPath),
+      assets_root: path.resolve(rootPath, this.downloader.assets),
+      game_assets: path.resolve(rootPath, this.downloader.assets),
+      version_type: 'release',
+      clientid: uuid,
+      resolution_width: 856,
       resolution_height: 482,
-      library_directory: path
-        .resolve(rootPath, this.downloader.libraries)
-        .split(path.sep)
-        .join('/'),
-      classpath_separator:';'
+      library_directory: path.resolve(rootPath, this.downloader.libraries).split(path.sep).join('/'),
+      classpath_separator: ';'
     };
 
-    // Sustitución de placeholders en JVM args
     jvm = jvm.map((str) => str.replace(/\$\{(\w+)\}/g, (_, p1) => fields[p1] || str));
 
-    // Construir línea de comandos completa
     let args = [...jvm, '-cp', libs, mainClass, ...gameArgs];
     args = args.map((arg) => (fields[arg] ? fields[arg] : arg));
 
-    // Selección de Java
     if (!java) java = 'C:/Program Files/Java/jdk-17/bin/java.exe';
     if (custom && custom.includes('forge') && parseInt(version.split('.')[1]) < 16 && !java8) {
       java = java8 || 'C:/Program Files/Java/jre-1.8/bin/java.exe';
       this.emisor.emit('debug', `USANDO JAVA 8`);
     }
 
-    // Lanzar proceso Minecraft
-    const minecraft = spawn(java, args, { cwd: path.resolve(rootPath) });
     this.emisor.emit('debug', `INICIANDO MINECRAFT VERSION: ${custom || version}`);
     this.emisor.emit('debug', `ARGUMENTOS: ${args.join(' ')}`);
-    minecraft.stdout.on('data', (data) => this.emisor.emit('debug', data.toString().trim()));
-    minecraft.stderr.on('data', (data) => this.emisor.emit('debug', data.toString().trim()));
+
+    const minecraft = spawn(java, args, { cwd: path.resolve(rootPath) });
+
+    minecraft.stdout.on('data', (data) =>
+      this.emisor.emit('debug', data.toString().trim())
+    );
+
+    minecraft.stderr.on('data', (data) =>
+      this.emisor.emit('debug', data.toString().trim())
+    );
+
+    minecraft.on('close', (code) =>
+      this.emisor.emit('close', code)
+    );
+
+    return new MinecraftInstance(minecraft);
   }
 }
 

@@ -1,3 +1,7 @@
+/*! Cubic Neutron
+ * ©2025 Cubic Neutron - https://github.com/CubicLauncher
+*/
+
 import { Launcher, Downloader } from "../components/Handler.js";
 const downloader = new Downloader()
 const launcher = new Launcher()

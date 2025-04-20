@@ -1,3 +1,7 @@
+/*! Cubic Neutron
+ * ©2025 Cubic Neutron - https://github.com/CubicLauncher
+*/
+
 import fs from 'fs/promises';
 import { createWriteStream, unlinkSync } from 'fs';
 import path from 'path';

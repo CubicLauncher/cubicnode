@@ -1,4 +1,4 @@
-import Launcher from 'cubic-neutron';
+import Launcher from '../components/launcher.js';
 
 const launcher = new Launcher();
 
@@ -6,9 +6,9 @@ const launcher = new Launcher();
 const perfil = launcher.profileManager.createProfile({
   name: "Perfil PvP",
   version: "1.16.5",
-  memory: { min: "2G", max: "6G" },
-  gameDirectory: "./minecraft", // RUTA DEL MINECRAFT
-  java: "C:/Program Files/Java/jre1.8.0_451/bin/java.exe", // RUTA DE TU JAVA
+  memory: { min: "1G", max: "2G" },
+  gameDirectory: "C:/Users/Santi/AppData/Roaming/cubic/.minecraft",
+  java: "C:/Program Files/Java/jre1.8.0_451/bin/java.exe",
   username: "Steve"
 });
 

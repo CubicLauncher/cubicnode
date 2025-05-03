@@ -4,6 +4,6 @@
 
 import Downloader from './downloader.js';
 import Launcher from './launcher.js';
-import ProfileManager from './profileManager.js';
 
-export { Downloader, Launcher, ProfileManager };
+
+export { Downloader, Launcher };

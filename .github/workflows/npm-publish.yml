@@ -12,7 +12,7 @@ jobs:
         with:
           node-version: 22.14.0
           registry-url: https://registry.npmjs.org/
-      - run: npm ci
+      - run: npm i
       - run: npm run build
       - uses: actions/upload-artifact@v4
         with:

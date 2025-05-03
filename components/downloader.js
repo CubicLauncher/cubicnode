@@ -1,6 +1,7 @@
-/*! Cubic Neutron
+/*!
+ * Cubic Neutron
  * ©2025 Cubic Neutron - https://github.com/CubicLauncher
-*/
+ */
 
 import fs from 'fs/promises';
 import { createWriteStream, unlinkSync } from 'fs';
@@ -11,20 +12,40 @@ import { Readable } from 'stream';
 
 const shownNumbers = new Set();
 
+/**
+ * Clase encargada de gestionar la descarga de archivos necesarios para ejecutar Minecraft.
+ * @class
+ */
 class Downloader {
   constructor() {
+    /** @type {{ meta: string, resource: string }} URLs de metadatos y recursos */
     this.url = {
       meta: 'https://launchermeta.mojang.com/mc/game/version_manifest.json',
       resource: 'https://resources.download.minecraft.net',
     };
+
+    /** @type {string} Directorio de caché */
     this.cache = 'cache';
+    /** @type {string} Directorio de versiones */
     this.versions = 'versions';
+    /** @type {string} Directorio de assets */
     this.assets = 'assets';
+    /** @type {string} Directorio de librerías */
     this.libraries = 'libraries';
+    /** @type {string} Directorio de nativos */
     this.natives = 'natives';
+
+    /** @type {EventEmitter} Emisor de eventos */
     this.emisor = new EventEmitter();
   }
 
+  /**
+   * Descarga un archivo desde una URL a un directorio especificado.
+   * @param {string} url - URL del archivo.
+   * @param {string} dir - Ruta de destino.
+   * @param {string} name - Nombre del archivo.
+   * @returns {Promise<void>}
+   */
   async down(url, dir, name) {
     try {
       const filePath = path.join(dir, name);
@@ -55,6 +76,11 @@ class Downloader {
     }
   }
 
+  /**
+   * Obtiene una lista de versiones de Minecraft según el tipo solicitado.
+   * @param {'vanilla'|'snapshot'|'old_alpha'} type - Tipo de versión.
+   * @returns {Promise<Object[]>} Lista de versiones disponibles.
+   */
   getVersions(type) {
     return new Promise((resolve, reject) => {
       fetch(this.url.meta)
@@ -81,6 +107,10 @@ class Downloader {
     });
   }
 
+  /**
+   * Descarga el archivo de definición de versión desde Mojang.
+   * @private
+   */
   async #downloadVersion() {
     this.emisor.emit('downloadFiles', 'Downloading main files.');
 
@@ -104,6 +134,10 @@ class Downloader {
     await this.down(versionInfo.url, versionDir, `${this.version}.json`);
   }
 
+  /**
+   * Descarga el archivo JAR del cliente de Minecraft.
+   * @private
+   */
   async #downloadClient() {
     this.emisor.emit('downloadFiles', 'Downloading client.');
 
@@ -115,6 +149,10 @@ class Downloader {
     await this.down(clientUrl, path.join(this.root, this.versions, this.version), `${this.version}.jar`);
   }
 
+  /**
+   * Descarga todos los assets (texturas, sonidos, etc.) de la versión.
+   * @private
+   */
   async #downloadAssets() {
     this.emisor.emit('downloadFiles', 'Downloading assets.');
 
@@ -153,6 +191,10 @@ class Downloader {
     }
   }
 
+  /**
+   * Descarga y extrae los archivos nativos necesarios.
+   * @private
+   */
   async #downloadNatives() {
     this.emisor.emit('downloadFiles', 'Downloading natives.');
 
@@ -179,6 +221,10 @@ class Downloader {
     }
   }
 
+  /**
+   * Descarga todas las librerías requeridas.
+   * @private
+   */
   async #downloadLibraries() {
     this.emisor.emit('downloadFiles', 'Downloading libraries.');
 
@@ -197,14 +243,30 @@ class Downloader {
     }
   }
 
+  /**
+   * Emite un evento personalizado.
+   * @param {string} event - Nombre del evento.
+   * @param {...any} args - Argumentos para el callback del evento.
+   */
   emit(event, ...args) {
     this.emisor.emit(event, ...args);
   }
 
+  /**
+   * Registra un listener para un evento.
+   * @param {string} event - Evento a escuchar.
+   * @param {Function} callback - Función callback.
+   */
   on(event, callback) {
     this.emisor.on(event, callback);
   }
 
+  /**
+   * Ejecuta todo el proceso de descarga de una versión de Minecraft.
+   * @param {string} version - Versión a descargar.
+   * @param {string} root - Ruta raíz donde se almacenarán los archivos.
+   * @returns {Promise<void>}
+   */
   async download(version, root) {
     this.version = version;
     this.root = root;

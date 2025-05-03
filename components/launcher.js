@@ -108,6 +108,20 @@ class Launcher {
     this.emisor.on(event, callback);
   }
 
+  
+  /**
+   * Lanza el juego con una configuración.
+   * @param {Object} options - Opciones de lanzamiento.
+   * @param {string} options.username - Nombre de usuario.
+   * @param {string} options.version - Versión de Minecraft.
+   * @param {string} options.gameDirectory - Directorio base.
+   * @param {Object} options.memory - Configuración de memoria.
+   * @param {string} options.memory.min - Memoria mínima.
+   * @param {string} options.memory.max - Memoria máxima.
+   * @param {string} [options.java] - Ruta al ejecutable Java.
+   * @param {string} [options.java8] - Ruta alternativa para Java 8.
+   * @returns {Promise<MinecraftInstance>} Instancia de Minecraft en ejecución.
+   */
   async launch(options) {
     const minM = options.memory.min;
     const maxM = options.memory.max;
@@ -255,6 +269,21 @@ class Launcher {
 
     return new MinecraftInstance(minecraft);
   }
+
+    /**
+   * Lanza una instancia del juego con su propio directorio.
+   * @param {Object} options - Opciones de lanzamiento.
+   * @param {string} options.username - Nombre de usuario.
+   * @param {string} options.version - Versión de Minecraft.
+   * @param {string} options.name - Nombre de la instancia.
+   * @param {string} options.gameDirectory - Ruta base.
+   * @param {Object} options.memory - Memoria asignada.
+   * @param {string} options.memory.min - Mínimo de memoria.
+   * @param {string} options.memory.max - Máximo de memoria.
+   * @param {string} [options.java] - Ruta a Java 17.
+   * @param {string} [options.java8] - Ruta a Java 8, si se necesita.
+   * @returns {Promise<MinecraftInstance>} Instancia del juego.
+   */
   async launchInstance(options) {
     const minM = options.memory.min;
     const maxM = options.memory.max;

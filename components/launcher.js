@@ -45,11 +45,11 @@ class MinecraftInstance {
 }
 
 class Launcher {
-  constructor(gameDirectory = process.cwd()) {
+  constructor() {
     this.downloader = new Downloader(this);
     this.emisor = new EventEmitter();
     this.profileManager = new ProfileManager(
-      path.resolve(gameDirectory, 'profiles.json')
+      path.resolve(process.cwd(), 'profiles.json')
     );
   }
 

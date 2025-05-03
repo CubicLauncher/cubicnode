@@ -1,0 +1,11 @@
+{
+    "compilerOptions": {
+      "allowJs": true,
+      "declaration": true,
+      "emitDeclarationOnly": true,
+      "outDir": "dist",
+      "module": "commonjs"
+    },
+    "include": ["components/Handler.js"]
+  }
+  

@@ -1,7 +1,8 @@
 {
   "name": "cubic-neutron",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "Un módulo que permite la descarga y la ejecución de minecraft java con node.js",
+  "types": "dist/handler.d.ts",
   "keywords": [
     "minecraft",
     "minecraft-launcher",

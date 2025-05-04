@@ -2,12 +2,12 @@
  * ©2025 Cubic Neutron - https://github.com/CubicLauncher
 */
 
-import { Launcher, Downloader } from "../components/Handler";
+import { Launcher, Downloader } from "cubic-neutron";
 const downloader = new Downloader()
 const launcher = new Launcher()
 
 async function download() {
-    await launcher.launch({
+    // await launcher.launch({
         // username: 'username', // NOMBRE  USUARIO,
         // version: '1.16.5', // VERSION DE JUEGO - Varía dependiendo de la instalación.
         // type: 'vanilla', // neoforge - optifine - fabric
@@ -17,7 +17,7 @@ async function download() {
         //     max: '6G', // MAXIMO DE MEMORIA PARA USAR
         // },
         // java: 'C:/Program Files/Java/jre1.8.0_451/bin/java.exe',
-    })
+    // })
 
     // Legacy abajo de la 1.9
     //await launcher.launch({
@@ -35,8 +35,8 @@ async function download() {
     // await downloader.download('1.16.5', './minecraft')
 }
 
-launcher.on('debug', (data) => console.log(data));
+launcher.on('debug', (data) => console.log(data)); // Muestra informacion de debug sobre el lanzamiento
 downloader.on('downloadFiles', (data) => console.log(data)); // Se encarga de mostrar los paquetes de archivos que se están descargando.
-downloader.on('percentDownloaded', (data) => console.log(data));
+downloader.on('percentDownloaded', (data) => console.log(data)); // Muestra el porcentaje descargado.
 
 download();

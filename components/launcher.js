@@ -11,7 +11,7 @@ import EventEmitter from 'events';
 import crypto from 'node:crypto';
 import ProfileManager from './profileManager.js';
 
-export class MinecraftInstance {
+class MinecraftInstance {
   constructor(process) {
     this.process = process;
   }

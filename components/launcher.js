@@ -47,8 +47,10 @@ class Launcher {
   constructor() {
     this.downloader = new Downloader(this);
     this.emisor = new EventEmitter();
+    // Initialize profileManager with the game directory path
+    const gameDir = path.resolve(process.cwd(), 'minecraft');
     this.profileManager = new ProfileManager(
-      path.resolve(process.cwd(), 'profiles.json')
+      path.resolve(gameDir, 'profiles.json')
     );
   }
 
@@ -58,6 +60,11 @@ class Launcher {
         path.resolve(root, 'launcher_profiles.json'),
         JSON.stringify({ profiles: {} })
       );
+    }
+    
+    // Update profileManager path if it's different from the game directory
+    if (this.profileManager.profilePath !== path.resolve(root, 'profiles.json')) {
+      this.profileManager.updatePath(path.resolve(root, 'profiles.json'));
     }
   }
 
@@ -403,4 +410,5 @@ class Launcher {
   }
 }
 
+export { Launcher };
 export default Launcher;

@@ -1,16 +1,12 @@
 {
   "name": "cubic-neutron",
-  "version": "0.0.10",
+  "version": "1.0.0",
   "description": "Un módulo que permite la descarga y la ejecución de minecraft java con node.js",
   "types": "dist/handler.d.ts",
+  "type": "module",
   "keywords": [
-    "minecraft",
     "minecraft-launcher",
-    "minecraft-node",
     "minecraft-core",
-    "javascript",
-    "node",
-    "nodejs",
     "minecraft-launcher-core",
     "optifine",
     "forge",
@@ -25,13 +21,27 @@
     "url": "git+https://github.com/CubicLauncher/neutron"
   },
   "scripts": {
-    "build": "tsc"
+    "type-check": "tsc --noEmit",
+    "type-check:watch": "npm run type-check -- --watch",
+    "build": "concurrently -n types,js \"npm run build:types\" \"npm run build:js\"",
+    "build:types": "tsc --emitDeclarationOnly",
+    "build:js": "babel src --out-dir lib --extensions \".ts\" --source-maps",
+    "test": "jest \"lib/.*\\.test\\.js\" --env=node",
+    "lint": "eslint src"
   },
   "dependencies": {
+    "@types/adm-zip": "^0.5.7",
+    "@types/node": "^22.15.17",
     "adm-zip": "^0.5.16",
+    "babel-cli": "^6.26.0",
     "uuid": "^11.1.0"
   },
   "devDependencies": {
+    "concurrently": "^9.1.2",
+    "eslint": "^9.26.0",
     "typescript": "^5.8.3"
-  }
+  },
+  "trustedDependencies": [
+    "core-js"
+  ]
 }

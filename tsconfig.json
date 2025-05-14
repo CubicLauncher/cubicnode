@@ -1,11 +1,15 @@
 {
-    "compilerOptions": {
-      "allowJs": true,
-      "declaration": true,
-      "emitDeclarationOnly": true,
-      "outDir": "dist",
-      "module": "commonjs"
-    },
-    "include": ["components/Handler.js"]
-  }
-  
+  "compilerOptions": {
+    "module": "ESNext",
+    "target": "ES5",
+    "moduleResolution": "node",
+    "sourceMap": true,
+    "strict": true,
+    "declaration": true,
+    "esModuleInterop": true,
+    "outDir": "lib",
+    "lib": ["esnext"]
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "**/*.spec.ts"]
+}

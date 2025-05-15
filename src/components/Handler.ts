@@ -4,6 +4,6 @@
 
 import { getVersions } from "./others/Manifest";
 import Downloader from "./downloader/downloader";
-import Launcher from "./launcher/launcher";
+import NeutronLauncher from "./launcher/launcher";
 
-export { getVersions, Downloader, Launcher };
+export { getVersions, Downloader, NeutronLauncher };

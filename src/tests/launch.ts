@@ -1,18 +1,13 @@
-import { Launcher } from "../components/Handler";
+import { NeutronLauncher } from "../components/Handler";
 
-const launcher = new Launcher("./minecraft");
+const launcher = new NeutronLauncher();
 
-launcher.on("debug", (data: string) => console.log(data));
-let Instance = launcher.launch({
-  username: "santiagolxx", // Ingresa tu nombre de usuario
-  version: "1.16.5", // Ingresa la versión de Forge
-  memory: {
-    // Define la memoria que quieras usar
-    min: 512, // Mínimo de memoria
-    max: 700, // Máximo de memoria
-  },
-  java: {
-    Java17: "/usr/lib/jvm/java-8-openjdk/bin/java",
-    Java8: "/usr/lib/jvm/java-8-openjdk/bin/java",
-  },
+launcher.launchVersion({
+  username: "ceplasplas",
+  version: "fabric-loader-0.16.14-1.16.5",
+  minecraftDir: "./minecraft",
+  maxMemory: 2048,
+  minMemory: 512,
+  isDemo: false,
+  accessToken: "1234",
 });

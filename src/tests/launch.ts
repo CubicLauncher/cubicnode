@@ -1,10 +1,10 @@
-import Launcher from "../components/launcher/launcher";
+import { Launcher } from "../components/Handler";
 
 const launcher = new Launcher("./minecraft");
 
-launcher.on("debug", (data) => console.log(data));
+launcher.on("debug", (data: string) => console.log(data));
 let Instance = launcher.launch({
-  username: "dani_adbg", // Ingresa tu nombre de usuario
+  username: "santiagolxx", // Ingresa tu nombre de usuario
   version: "1.16.5", // Ingresa la versión de Forge
   memory: {
     // Define la memoria que quieras usar

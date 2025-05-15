@@ -5,7 +5,7 @@
 import fs from "fs";
 import { spawn } from "child_process";
 import path from "path";
-import { Downloader } from "../../Handler";
+import { Downloader } from "../Handler";
 import EventEmitter from "events";
 import crypto from "node:crypto";
 import { ChildProcess } from "node:child_process";

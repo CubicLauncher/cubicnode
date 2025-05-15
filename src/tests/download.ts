@@ -1,4 +1,4 @@
-import { Downloader } from "../Handler";
+import { Downloader } from "../components/Handler";
 import path from "node:path";
 
 let downloader = new Downloader("./minecraft");

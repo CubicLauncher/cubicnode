@@ -1,20 +1,16 @@
-import resolve from "@rollup/plugin-node-resolve";
-import commonjs from "@rollup/plugin-commonjs";
-import typescript from "@rollup/plugin-typescript";
+import resolve from '@rollup/plugin-node-resolve';
+import commonjs from '@rollup/plugin-commonjs';
 
 export default {
-  input: "./unpacked/index.js",
+  input: 'unpacked/index.js',
   output: {
-    file: "dist/index.js",
-    format: "esm",
+    file: 'dist/index.js',
+    format: 'esm',
     sourcemap: true,
   },
   plugins: [
-    typescript({
-      tsconfig: "./tsconfig.json"
-    }),
-    resolve({ extensions: [".ts"] }),
+    resolve({ extensions: ['.js'] }),
     commonjs()
   ],
-  external: ["child_process", "events"],
+  external: ['child_process', 'events'] // tus deps nativas o externas
 };

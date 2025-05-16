@@ -24,7 +24,8 @@
     "build": "npm run build:types && npm run bundle:types && npm run build:js",
     "build:types": "tsc -p tsconfig.types.json",
     "bundle:types": "rollup -c rollup.dts.config.mjs",
-    "build:js": "rollup -c rollup.config.mjs"
+    "build:js": "tsc",
+    "bundle:js": "roll-up -c"
   },
   "dependencies": {
     "@types/adm-zip": "^0.5.7",

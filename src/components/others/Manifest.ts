@@ -6,23 +6,29 @@
 import { MojangUrls } from "../others/constants";
 import { mkdir, writeFile, access, constants } from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "url";
+import { fileURLToPath } from "node:url";
+import axios from "axios";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-async function fetchManifest(): Promise<Response> {
-  const res = await fetch(MojangUrls.meta);
-  return res;
+async function fetchManifest(): Promise<any> {
+  try {
+    const res = await axios.get(MojangUrls.meta);
+    return res;
+  } catch (error) {
+    throw new Error(`Error al obtener el manifiesto: ${error}`);
+  }
 }
 
 export async function getVersions(type: VersionType): Promise<VersionInfo[]> {
   const res = await fetchManifest();
-  if (!res.ok) {
+
+  if (res.status !== 200) {
     throw new Error(`HTTP error! Status: ${res.status}`);
   }
 
-  const data = (await res.json()) as Manifest;
+  const data = res.data as Manifest;
 
   switch (type) {
     case "release":
@@ -36,7 +42,7 @@ export async function getVersions(type: VersionType): Promise<VersionInfo[]> {
 
 export async function getManifestCached(cacheDir: string) {
   const res = await fetchManifest();
-  const manifestData = await res.json();
+  const manifestData = res.data;
   const ManifestContent = JSON.stringify(manifestData, null, 2);
 
   // Resolviendo la ruta absoluta para el archivo

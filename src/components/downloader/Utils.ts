@@ -1,8 +1,17 @@
+/*! Cubic Neutron
+ * ©2025 Cubic Neutron - https://github.com/CubicLauncher
+ * src/components/downloader/Utils.ts
+ */
 import fs from "fs/promises";
 import { createWriteStream } from "node:fs";
 import path from "node:path";
-import { Readable } from "stream";
+import { Readable } from "node:stream";
+import type { ReadableStream as NodeWebStream } from "node:stream/web";
+import { pipeline } from "node:stream/promises";
 
+/**
+ *  Descarga un archivo desde una url y lo guarda en un directorio con un nombre dado.
+ */
 export async function download_file(
   url: string,
   dir: string,
@@ -11,26 +20,11 @@ export async function download_file(
   const filePath = path.join(dir, name);
   await fs.mkdir(dir, { recursive: true });
 
-  return new Promise((resolve, reject) => {
-    const file = createWriteStream(filePath);
+  const response = await fetch(url, { signal: AbortSignal.timeout(10000) });
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  if (!response.body) throw new Error("Response body is null");
 
-    fetch(url, { signal: AbortSignal.timeout(10000) })
-      .then((response) => {
-        if (!response.ok)
-          throw new Error(`HTTP error! Status: ${response.status}`);
-        if (!response.body) throw new Error("Response body is null");
+  const webStream = response.body as unknown as NodeWebStream<Uint8Array>;
 
-        Readable.fromWeb(response.body).pipe(file);
-
-        file.on("finish", () => file.close(() => resolve()));
-        file.on("error", (err) => {
-          file.close();
-          reject(err);
-        });
-      })
-      .catch((err) => {
-        file.close();
-        reject(err);
-      });
-  });
+  await pipeline(Readable.fromWeb(webStream), createWriteStream(filePath));
 }

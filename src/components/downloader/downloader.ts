@@ -1,5 +1,6 @@
 /*! Cubic Neutron
  * ©2025 Cubic Neutron - https://github.com/CubicLauncher
+ * src/components/downloader/downloader.ts
  */
 
 import fs from "fs/promises";

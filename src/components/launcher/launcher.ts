@@ -1,7 +1,7 @@
 /**
  * CubicLauncher/Neutron
  * ©2025 Cubic Neutron - https://github.com/CubicLauncher
- * Optimized version with fixes for missing arguments
+ * src/components/launcher/launcher.ts
  * todo: arreglar que el quickplay se use si es necesario.
  */
 

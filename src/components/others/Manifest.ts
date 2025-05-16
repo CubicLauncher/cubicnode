@@ -1,3 +1,8 @@
+/*! Cubic Neutron
+ * ©2025 Cubic Neutron - https://github.com/CubicLauncher
+ * src/others/Manifest.ts
+ */
+
 import { MojangUrls } from "../others/constants";
 import { mkdir, writeFile, access, constants } from "node:fs/promises";
 import path from "node:path";

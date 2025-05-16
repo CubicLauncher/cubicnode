@@ -1,5 +1,7 @@
-// src/types/global.d.ts
-export {};
+/*! Cubic Neutron
+ * ©2025 Cubic Neutron - https://github.com/CubicLauncher
+ * src/others/global.d.ts
+ */ export {};
 
 declare global {
   type VersionType = "old_alpha" | "release" | "snapshot";

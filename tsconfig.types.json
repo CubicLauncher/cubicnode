@@ -2,8 +2,8 @@
   "compilerOptions": {
     "declaration": true,
     "emitDeclarationOnly": true,
-    "declarationDir": "dist/types",
-    "outDir": "dist/types",
+    "declarationDir": "unpacked",
+    "outDir": "unpacked",
     "module": "ESNext",
     "target": "ESNext",
     "moduleResolution": "node",

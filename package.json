@@ -25,7 +25,7 @@
     "build:types": "tsc -p tsconfig.types.json",
     "bundle:types": "rollup -c rollup.dts.config.mjs",
     "build:js": "tsc",
-    "bundle:js": "roll-up -c"
+    "bundle:js": "rollup -c"
   },
   "dependencies": {
     "@types/adm-zip": "^0.5.7",

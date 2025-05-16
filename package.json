@@ -26,7 +26,7 @@
     "build:js": "rollup -c",
     "build:types": "tsc --emitDeclarationOnly",
     "bundle:types": "rollup -c rollup.dts.config.mjs",
-    "build": "npm run build:types && npm run bundle:types && npm run build",
+    "build": "npm run build:types && npm run bundle:types && npm run build:js",
     "test": "jest \"lib/.*\\.test\\.js\" --env=node",
     "lint": "eslint src"
   },

@@ -1,6 +1,6 @@
 {
   "name": "cubic-neutron",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Un módulo que permite la descarga y la ejecución de minecraft java con node.js",
   "types": "dist/index.d.ts",
   "type": "module",
@@ -21,15 +21,15 @@
     "url": "git+https://github.com/CubicLauncher/neutron"
   },
   "scripts": {
-  "clean": "rm -rf unpacked dist",
-  "build:js": "tsc",
-  "build:types": "tsc -p tsconfig.types.json",
-  "bundle:js": "rollup -c rollup.config.mjs",
-  "bundle:types": "rollup -c rollup.dts.config.mjs",
-  "postbuild": "rm -rf unpacked",
-  "build": "npm run clean && npm run build:js && npm run build:types && npm run bundle:js && npm run bundle:types && npm run postbuild",
-  "publish": "npm run build && npm publish"
-},
+    "clean": "rm -rf unpacked dist",
+    "build:js": "tsc",
+    "build:types": "tsc -p tsconfig.types.json",
+    "bundle:js": "rollup -c rollup.config.mjs",
+    "bundle:types": "rollup -c rollup.dts.config.mjs",
+    "postbuild": "rm -rf unpacked",
+    "build": "npm run clean && npm run build:js && npm run build:types && npm run bundle:js && npm run bundle:types && npm run postbuild",
+    "publish": "npm run build && npm publish"
+  },
   "dependencies": {
     "@types/adm-zip": "^0.5.7",
     "@types/node": "^22.15.17",

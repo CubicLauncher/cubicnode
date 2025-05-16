@@ -9,7 +9,13 @@ import path from "path";
 import { EventEmitter } from "events";
 import AdmZip from "adm-zip";
 import { download_file } from "./Utils";
-import { MojangUrls } from "../others/constants";
+import {
+  MojangUrls,
+  MojangUrl,
+  MinecraftVersionManifest,
+  AssetFile,
+  VersionInfo,
+} from "../others/constants";
 
 const shownNumbers = new Set();
 

@@ -3,7 +3,7 @@ import commonjs from "@rollup/plugin-commonjs";
 import typescript from "@rollup/plugin-typescript";
 
 export default {
-  input: "./dist/index.js",
+  input: "./unpacked/index.js",
   output: {
     file: "dist/index.js",
     format: "esm",

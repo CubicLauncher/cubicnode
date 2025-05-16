@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { MojangUrls } from "../others/constants";
 import { mkdir, writeFile, access, constants } from "node:fs/promises";
 import path from "node:path";
@@ -30,7 +29,7 @@ export async function getVersions(type: VersionType): Promise<VersionInfo[]> {
   }
 }
 
-export async function getManifestCached(cacheDir: string, filename: string) {
+export async function getManifestCached(cacheDir: string) {
   const res = await fetchManifest();
   const manifestData = await res.json();
   const ManifestContent = JSON.stringify(manifestData, null, 2);

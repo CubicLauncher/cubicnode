@@ -7,7 +7,6 @@ import path from "node:path";
 import os from "node:os";
 import { ChildProcess, spawn } from "child_process";
 import { v4 } from "uuid";
-import { open } from "node:inspector/promises";
 
 // Interfaces para el JSON de versión de Minecraft
 interface MinecraftVersionInfo {

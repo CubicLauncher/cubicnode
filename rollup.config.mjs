@@ -13,7 +13,7 @@ export default {
     typescript({
       tsconfig: "./tsconfig.json"
     }),
-    resolve({ extensions: [".js", ".ts"] }),
+    resolve({ extensions: [".ts"] }),
     commonjs()
   ],
   external: ["child_process", "events"],

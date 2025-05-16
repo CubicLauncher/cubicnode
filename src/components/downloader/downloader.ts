@@ -10,23 +10,43 @@ import AdmZip from "adm-zip";
 import { Readable } from "stream";
 import { download_file } from "./Utils";
 import { MojangUrls } from "../others/constants";
+import { log } from "console";
 
 const shownNumbers = new Set();
 
-interface Downloader {
+interface IDownloader {
   url: MojangUrl;
-  file: any;
   cache: string;
   versions: string;
+  version: string;
   assets: string;
   libraries: string;
   natives: string;
   emisor: EventEmitter;
   root: string;
-  version: string;
+  file: MinecraftVersionManifest;
 }
 
-class Downloader {
+interface Events {
+  downloadFiles: (message: string) => void;
+  percentDownloaded: (percentage: string) => void;
+}
+
+type EventName = keyof Events;
+type EventArgs<E extends EventName> = Parameters<Events[E]>;
+
+class Downloader implements IDownloader {
+  url: MojangUrl;
+  cache: string;
+  versions: string;
+  version: string;
+  assets: string;
+  libraries: string;
+  natives: string;
+  emisor: EventEmitter;
+  root: string;
+  file: MinecraftVersionManifest;
+
   constructor(MinecraftDir: string) {
     this.root = MinecraftDir;
     this.url = MojangUrls;
@@ -36,6 +56,36 @@ class Downloader {
     this.libraries = path.resolve(MinecraftDir, "libraries");
     this.natives = path.resolve(MinecraftDir, "natives");
     this.emisor = new EventEmitter();
+    this.version = "";
+
+    // Inicialización segura del objeto `file`
+    this.file = {
+      arguments: {
+        game: [],
+        jvm: [],
+      },
+      assetIndex: {
+        id: "",
+        hash: "",
+        size: 0,
+        totalSize: 1,
+        url: "",
+      },
+      assets: "",
+      complianceLevel: 0,
+      downloads: {
+        client: { sha1: "", size: 0, url: "" },
+        client_mappings: { sha1: "", size: 0, url: "" },
+        server: { sha1: "", size: 0, url: "" },
+        server_mappings: { sha1: "", size: 0, url: "" },
+      },
+      id: "",
+      javaVersion: {
+        component: "",
+        majorVersion: 8,
+      },
+      libraries: [],
+    };
   }
 
   private async downloadVersion() {
@@ -51,12 +101,14 @@ class Downloader {
       "utf-8",
     );
     const manifest = JSON.parse(manifestData);
-    const versionInfo = manifest.versions.find((x) => x.id === this.version);
+    const versionInfo = manifest.versions.find(
+      (version: VersionInfo) => version.id === this.version,
+    );
 
     if (!versionInfo) {
       const available = manifest.versions
         .slice(0, 10)
-        .map((v) => v.id)
+        .map((Version: VersionInfo) => Version.id)
         .join(", ");
       throw new Error(
         `La versión "${this.version}" no existe. Algunas versiones disponibles: ${available}...`,
@@ -98,37 +150,82 @@ class Downloader {
     const assetIndexUrl = this.file.assetIndex.url;
     const totalSize = this.file.assetIndex.totalSize;
 
-    await download_file(assetIndexUrl, indexDir, `${this.version}.json`);
-    await download_file(assetIndexUrl, cacheJsonDir, `${this.version}.json`);
+    await download_file(
+      assetIndexUrl,
+      indexDir,
+      `${this.file.assetIndex.id || this.version}.json`,
+    );
+    await download_file(
+      assetIndexUrl,
+      cacheJsonDir,
+      `${this.file.assetIndex.id || this.version}.json`,
+    );
 
     const assetFileData = await fs.readFile(
-      path.join(indexDir, `${this.version}.json`),
+      path.join(indexDir, `${this.file.assetIndex.id || this.version}.json`),
       "utf-8",
     );
-    const assetFile = JSON.parse(assetFileData);
+    const assetFile = JSON.parse(assetFileData) as AssetFile;
     const objectsDir = path.join(this.assets, "objects");
     await fs.mkdir(objectsDir, { recursive: true });
 
     let size = 0;
 
+    // Verify that assetFile.objects exists and is an object
+    if (!assetFile.objects || typeof assetFile.objects !== "object") {
+      throw new Error(
+        `Invalid asset file structure. Expected 'objects' property but got: ${JSON.stringify(assetFile)}`,
+      );
+    }
+
     for (const [key, fileInfo] of Object.entries(assetFile.objects)) {
+      // Add validation for fileInfo structure
+      if (!fileInfo || typeof fileInfo !== "object") {
+        console.warn(
+          `Skipping invalid asset entry for key "${key}": ${JSON.stringify(fileInfo)}`,
+        );
+        continue;
+      }
+
       const fileSize = fileInfo.size;
       const fileHash = fileInfo.hash;
+      // Add validation for fileHash
+      if (!fileHash || typeof fileHash !== "string") {
+        console.warn(
+          `Skipping asset with invalid hash for key "${key}": ${JSON.stringify(fileInfo)}`,
+        );
+        continue;
+      }
+
       const fileSubHash = fileHash.substring(0, 2);
       const fileDir = path.join(objectsDir, fileSubHash);
       await fs.mkdir(fileDir, { recursive: true });
 
-      await download_file(
-        `${this.url.resource}/${fileSubHash}/${fileHash}`,
-        fileDir,
-        fileHash,
-      );
+      try {
+        await download_file(
+          `${this.url.resource}/${fileSubHash}/${fileHash}`,
+          fileDir,
+          fileHash,
+        );
 
-      size += fileSize;
-      const percentage = Math.floor((size / totalSize) * 100);
-      if (!shownNumbers.has(percentage)) {
-        this.emisor.emit("percentDownloaded", `${percentage}`);
-        shownNumbers.add(percentage);
+        // Only add to size if we have a valid number
+        if (typeof fileSize === "number" && !isNaN(fileSize)) {
+          size += fileSize;
+
+          if (totalSize > 0) {
+            const percentage = Math.floor((size / totalSize) * 100);
+            if (
+              !shownNumbers.has(percentage) &&
+              percentage >= 0 &&
+              percentage <= 100
+            ) {
+              this.emisor.emit("percentDownloaded", `${percentage}`);
+              shownNumbers.add(percentage);
+            }
+          }
+        }
+      } catch (error) {
+        console.error(`Error downloading asset ${key} (${fileHash}): ${error}`);
       }
     }
   }
@@ -162,14 +259,15 @@ class Downloader {
     };
 
     for (const lib of this.file.libraries) {
-      const classifiers = lib.downloads?.classifiers;
+      // Skip if lib.downloads is undefined
+      if (!lib.downloads) continue;
+
+      const classifiers = lib.downloads.classifiers;
       if (!classifiers) continue;
 
-      // Try to find the native for the current platform
       let native = classifiers[nativeClassifier];
 
-      // If not found, try fallbacks for the platform
-      if (!native && fallbackClassifiers[platform]) {
+      if (!native && platform in fallbackClassifiers) {
         for (const fallbackClassifier of fallbackClassifiers[platform]) {
           if (classifiers[fallbackClassifier]) {
             native = classifiers[fallbackClassifier];
@@ -178,19 +276,42 @@ class Downloader {
         }
       }
 
-      if (native) {
+      if (native && native.url && native.path) {
         const zipPath = path.join(nativesDir, path.basename(native.path));
-        await download_file(native.url, nativesDir, path.basename(native.path));
 
-        // Special case for version 1.8 with nightly builds
-        if (this.version === "1.8" && native.url.includes("nightly")) {
-          unlinkSync(zipPath);
-          continue;
+        try {
+          await download_file(
+            native.url,
+            nativesDir,
+            path.basename(native.path),
+          );
+
+          // Special case for version 1.8 with nightly builds
+          if (this.version === "1.8" && native.url.includes("nightly")) {
+            try {
+              unlinkSync(zipPath);
+            } catch (error) {
+              console.warn(`Failed to delete ${zipPath}: ${error}`);
+            }
+            continue;
+          }
+
+          try {
+            const zip = new AdmZip(zipPath);
+            const targetDir = path.join(nativesDir, this.version);
+            await fs.mkdir(targetDir, { recursive: true });
+            zip.extractAllTo(targetDir, true);
+            unlinkSync(zipPath);
+          } catch (error) {
+            console.error(
+              `Error extracting native library ${zipPath}: ${error}`,
+            );
+          }
+        } catch (error) {
+          console.error(
+            `Error downloading native library ${native.url}: ${error}`,
+          );
         }
-
-        const zip = new AdmZip(zipPath);
-        zip.extractAllTo(path.join(nativesDir, this.version), true);
-        unlinkSync(zipPath);
       }
     }
   }
@@ -202,23 +323,37 @@ class Downloader {
     await fs.mkdir(libBaseDir, { recursive: true });
 
     for (const lib of this.file.libraries) {
-      if (lib.downloads?.artifact) {
+      if (
+        lib.downloads?.artifact &&
+        lib.downloads.artifact.url &&
+        lib.downloads.artifact.path
+      ) {
         const artifact = lib.downloads.artifact;
         const parts = artifact.path.split("/");
         parts.pop();
         const libDir = path.join(libBaseDir, ...parts);
-        await fs.mkdir(libDir, { recursive: true });
-        await download_file(artifact.url, libDir, path.basename(artifact.path));
+
+        try {
+          await fs.mkdir(libDir, { recursive: true });
+          await download_file(
+            artifact.url,
+            libDir,
+            path.basename(artifact.path),
+          );
+        } catch (error) {
+          console.error(`Error downloading library ${artifact.path}: ${error}`);
+        }
       }
     }
   }
 
-  emit(event, ...args) {
-    this.emisor.emit(event, ...args);
+  emit<E extends EventName>(event: E, ...args: EventArgs<E>): boolean {
+    return this.emisor.emit(event, ...args);
   }
 
-  on(event, callback) {
-    this.emisor.on(event, callback);
+  on<E extends EventName>(event: E, listener: Events[E]): this {
+    this.emisor.on(event, listener);
+    return this;
   }
 
   async download(version: string) {
@@ -226,24 +361,30 @@ class Downloader {
 
     if (!version) throw new Error("No version provided");
 
-    await this.downloadVersion();
-    this.emisor.emit(
-      "downloadFiles",
-      `Minecraft ${version} is now downloading.`,
-    );
-    await this.downloadClient();
-    this.emisor.emit("downloadFiles", "Client downloaded.");
-    await this.downloadAssets();
-    this.emisor.emit("downloadFiles", "Assets downloaded.");
-    await this.downloadLibraries();
-    this.emisor.emit("downloadFiles", "Libraries downloaded.");
-    await this.downloadNatives();
-    this.emisor.emit("downloadFiles", "Natives downloaded.");
-    this.emisor.emit("downloadFiles", "All files are downloaded.");
-
-    this.emisor.removeAllListeners("downloadFiles");
-    this.emisor.removeAllListeners("percentDownloaded");
-    shownNumbers.clear();
+    try {
+      await this.downloadVersion();
+      this.emisor.emit(
+        "downloadFiles",
+        `Minecraft ${version} is now downloading.`,
+      );
+      await this.downloadClient();
+      this.emisor.emit("downloadFiles", "Client downloaded.");
+      await this.downloadAssets();
+      this.emisor.emit("downloadFiles", "Assets downloaded.");
+      await this.downloadLibraries();
+      this.emisor.emit("downloadFiles", "Libraries downloaded.");
+      await this.downloadNatives();
+      this.emisor.emit("downloadFiles", "Natives downloaded.");
+      this.emisor.emit("downloadFiles", "All files are downloaded.");
+    } catch (error) {
+      this.emisor.emit("downloadFiles", `Error during download: ${error}`);
+      console.error("Download failed:", error);
+      throw error;
+    } finally {
+      this.emisor.removeAllListeners("downloadFiles");
+      this.emisor.removeAllListeners("percentDownloaded");
+      shownNumbers.clear();
+    }
   }
 }
 

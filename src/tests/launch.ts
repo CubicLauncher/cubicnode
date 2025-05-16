@@ -1,13 +1,12 @@
-import { NeutronLauncher } from "../components/Handler";
+import { NeutronLauncher } from "../../";
 
 const launcher = new NeutronLauncher();
 
 launcher.launchVersion({
-  username: "ceplasplas",
-  version: "fabric-loader-0.16.14-1.16.5",
-  minecraftDir: "./minecraft",
-  maxMemory: 2048,
-  minMemory: 512,
-  isDemo: false,
+  username: "santiagolxx",
+  uuid: "1234",
   accessToken: "1234",
+  minecraftDir: "./minecraft",
+  version: "1.9",
+  isCracked: false,
 });

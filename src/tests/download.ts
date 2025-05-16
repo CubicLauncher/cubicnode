@@ -1,7 +1,24 @@
-import { Downloader } from "../components/Handler";
-import path from "node:path";
+import { Downloader } from "../../";
 
-let downloader = new Downloader("./minecraft");
+async function main() {
+  const downloader = new Downloader("./minecraft");
 
-downloader.on("percentDownloaded", (data) => console.log(data));
-downloader.download("1.16.5");
+  // Escuchar eventos
+  downloader.on("downloadFiles", (msg) => {
+    console.log(`[Download] ${msg}`);
+  });
+
+  downloader.on("percentDownloaded", (percentage) => {
+    console.log(`[Progress] Descargado: ${percentage}%`);
+  });
+
+  try {
+    const version = "1.9"; // Cambia por la versión que quieras descargar
+    await downloader.download(version);
+    console.log("Descarga completada con éxito.");
+  } catch (error) {
+    console.error("Error durante la descarga:", error);
+  }
+}
+
+main();

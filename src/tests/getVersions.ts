@@ -1,4 +1,4 @@
-import { getVersions } from "../components/Handler";
+import { getVersions } from "../..";
 
 getVersions("release").then((data) => {
   data.forEach((version) => {
@@ -7,6 +7,7 @@ getVersions("release").then((data) => {
         console.log(version);
       }
     } catch (err) {
+      console.error(err);
       throw err;
     }
   });

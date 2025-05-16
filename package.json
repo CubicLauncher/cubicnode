@@ -21,11 +21,11 @@
     "url": "git+https://github.com/CubicLauncher/neutron"
   },
   "scripts": {
-  "build": "npm run build:types && npm run bundle:types && npm run build:js",
-  "build:types": "tsc -p tsconfig.types.json",
-  "bundle:types": "rollup -c rollup.dts.config.mjs",
-  "build:js": "rollup -c rollup.config.mjs"
-}
+    "build": "npm run build:types && npm run bundle:types && npm run build:js",
+    "build:types": "tsc -p tsconfig.types.json",
+    "bundle:types": "rollup -c rollup.dts.config.mjs",
+    "build:js": "rollup -c rollup.config.mjs"
+  },
   "dependencies": {
     "@types/adm-zip": "^0.5.7",
     "@types/node": "^22.15.17",

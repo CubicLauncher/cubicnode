@@ -14,7 +14,7 @@
   ],
   "license": "MIT",
   "author": "Santiagolxx",
-  "main": "components/Handler.js",
+  "main": "./index",
   "homepage": "https://github.com/CubicLauncher/neutron",
   "repository": {
     "type": "git",
@@ -33,12 +33,12 @@
     "@types/adm-zip": "^0.5.7",
     "@types/node": "^22.15.17",
     "adm-zip": "^0.5.16",
-    "babel-cli": "^6.26.0",
+    "axios": "^1.9.0",
+    "oxlint": "^0.16.10",
     "uuid": "^11.1.0"
   },
   "devDependencies": {
     "concurrently": "^9.1.2",
-    "eslint": "^9.26.0",
     "typescript": "^5.8.3"
   },
   "trustedDependencies": [

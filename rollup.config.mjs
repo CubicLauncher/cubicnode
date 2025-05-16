@@ -12,5 +12,5 @@ export default {
     resolve({ extensions: ['.js'] }),
     commonjs()
   ],
-  external: ['child_process', 'events'] // tus deps nativas o externas
+  external: ['child_process', 'events']
 };

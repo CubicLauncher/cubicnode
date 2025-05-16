@@ -10,7 +10,7 @@ export default {
     sourcemap: true,
   },
   plugins: [
-    resolve(),
+    resolve({ extensions: ['.js', '.ts'] }),
     commonjs(),
     typescript({
       tsconfig: "./tsconfig.json",

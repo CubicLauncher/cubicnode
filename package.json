@@ -1,16 +1,12 @@
 {
   "name": "cubic-neutron",
-  "version": "0.0.10",
+  "version": "1.0.0",
   "description": "Un módulo que permite la descarga y la ejecución de minecraft java con node.js",
-  "types": "dist/handler.d.ts",
+  "types": "dist/index.d.ts",
+  "type": "module",
   "keywords": [
-    "minecraft",
     "minecraft-launcher",
-    "minecraft-node",
     "minecraft-core",
-    "javascript",
-    "node",
-    "nodejs",
     "minecraft-launcher-core",
     "optifine",
     "forge",
@@ -18,20 +14,40 @@
   ],
   "license": "MIT",
   "author": "Santiagolxx",
-  "main": "components/Handler.js",
+  "main": "dist/index.js",
   "homepage": "https://github.com/CubicLauncher/neutron",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/CubicLauncher/neutron"
   },
   "scripts": {
-    "build": "tsc"
+    "type-check": "tsc --noEmit",
+    "type-check:watch": "npm run type-check -- --watch",
+    "build": "rollup -c",
+    "build:types": "tsc --emitDeclarationOnly",
+    "bundle:types": "rollup -c rollup.dts.config.mjs",
+    "prepare": "npm run build:types && npm run bundle:types && npm run build",
+    "test": "jest \"lib/.*\\.test\\.js\" --env=node",
+    "lint": "eslint src"
   },
   "dependencies": {
+    "@types/adm-zip": "^0.5.7",
+    "@types/node": "^22.15.17",
     "adm-zip": "^0.5.16",
+    "axios": "^1.9.0",
     "uuid": "^11.1.0"
   },
   "devDependencies": {
+    "oxlint": "^0.16.10",
+    "@rollup/plugin-commonjs": "^28.0.3",
+    "@rollup/plugin-node-resolve": "^16.0.1",
+    "@rollup/plugin-typescript": "^12.1.2",
+    "concurrently": "^9.1.2",
+    "rollup": "^4.40.2",
+    "rollup-plugin-dts": "^6.2.1",
     "typescript": "^5.8.3"
-  }
+  },
+  "trustedDependencies": [
+    "core-js"
+  ]
 }

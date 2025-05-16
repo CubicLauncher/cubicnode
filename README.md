@@ -25,57 +25,58 @@ npm install cubic-neutron
 
 ```javascript
 const { Downloader } = require('cubic-neutron');
-const downloader = new Downloader()
+const downloader = new Downloader('./minecraft')
 
-downloader.download('1.16.5', './minecraft')
+downloader.download('1.16.5')
 ```
 
 ### Lanzar Minecraft
 
 ```javascript
-const { Launcher } = require('cubic-neutron');
-const launcher = new Launcher()
+import Launcher from "../components/launcher/launcher";
+
+const launcher = new Launcher("./minecraft");
+
+launcher.on("debug", (data) => console.log(data));
 launcher.launch({
-    username: 'username', // NOMBRE  USUARIO,
-    version: '1.16.5', // VERSION DE JUEGO - Varía dependiendo de la instalación.
-    type: 'vanilla', // neoforge - optifine - fabric
-    gameDirectory: './minecraft', // RUTA DE JUEGO
-    memory: {
-        min: '2G', // MINIMO DE MEMORIA PARA USAR
-        max: '6G', // MAXIMO DE MEMORIA PARA USAR
-    },
-    java: 'C:/Program Files/Java/jre1.8.0_451/bin/java.exe',
-})
+  username: "santiagolxx", // Ingresa tu nombre de usuario
+  version: "1.16.5", // version a iniciar
+  memory: {
+    // Define la memoria que quieras usar
+    min: 512, // Mínimo de memoria
+    max: 700, // Máximo de memoria
+  },
+  java: {
+    Java17: "/usr/lib/jvm/java-17-openjdk/bin/java",
+    Java8: "/usr/lib/jvm/java-8-openjdk/bin/java",
+  },
+});
 ```
 
-### Instancias/Perfiles
+### Instancias
+Al iniciar una version se devuelve una clase MinecraftInstance, la cual trae varios metodos
+para operar con la instancia
 ```javascript
 import Launcher from 'cubic-neutron';
 
-const launcher = new Launcher();
+const launcher = new Launcher('./minecraft');
 
-// Crear un perfil personalizado
-const perfil = launcher.profileManager.createProfile({
-  name: "Perfil PvP",
-  version: "1.16.5",
-  memory: { min: "2G", max: "6G" },
-  gameDirectory: "./minecraft", // RUTA DEL MINECRAFT
-  java: "C:/Program Files/Java/jre1.8.0_451/bin/java.exe", // RUTA DE TU JAVA
-  username: "Steve"
-});
+let instance = launcher.launch({
+  ...
+})
 
-console.log("Perfil creado:", perfil);
+// Mata el proceso de la instancia
+instance.kill()
 
-// Listar todos los perfiles
-const perfiles = launcher.profileManager.listProfiles();
-console.log("Perfiles disponibles:", perfiles);
-
-// Lanzar Minecraft con el primer perfil
-const perfilSeleccionado = perfiles[0];
-launcher.launchInstance(perfilSeleccionado).then(instance => {
-  console.log("Minecraft lanzado con PID:", instance.getPid());
-  instance.onOutput(console.log);
-  instance.onClose(code => console.log("Minecraft cerrado con código:", code));
+instance.then((rosca) => {
+  // Obtiene stdout del juego.
+  instance.onOutput((data) => {
+    console.log(data);
+  });
+  // Devuelve el codigo de cierre
+  instance.onClose((data) => {
+    console.log(data);
+  });
 });
 ```
 
@@ -93,8 +94,7 @@ launcher.launchInstance(perfilSeleccionado).then(instance => {
 
 - `version`: Versión de Minecraft a ejecutar
 - `username`: Nombre de usuario
-- `path`: Ruta donde están los archivos de Minecraft
-- `javaPath`: Ruta al ejecutable de Java (opcional)    
+- `javaPath`: Ruta al ejecutable de Java (opcional)
 - `memory`: Memoria RAM asignada (opcional)
 
 ## 🤝 Contribuir

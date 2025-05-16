@@ -1,17 +1,85 @@
-/*! CubicLauncher/Neutron
+/**
+ * CubicLauncher/Neutron
  * ©2025 Cubic Neutron - https://github.com/CubicLauncher
+ * Optimized version with fixes for missing arguments
+ * todo: arreglar que el quickplay se use si es necesario.
  */
 
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
 import { ChildProcess, spawn } from "child_process";
-import { v4 } from "uuid";
+import { v4 as uuidv4 } from "uuid";
 
-// Interfaces para el JSON de versión de Minecraft
+// Types
+type OSType = "windows" | "osx" | "linux" | string;
+type VersionType = "release" | "snapshot" | string;
+
+interface Download {
+  sha1: string;
+  size: number;
+  url: string;
+}
+
+interface AssetIndex {
+  id: string;
+  sha1: string;
+  size: number;
+  totalSize: number;
+  url: string;
+}
+
+interface LoggingConfig {
+  client: {
+    argument: string;
+    file: {
+      id: string;
+      sha1: string;
+      size: number;
+      url: string;
+    };
+    type: string;
+  };
+}
+
+interface Rule {
+  action: "allow" | "disallow";
+  os?: {
+    name?: string;
+    arch?: string;
+    version?: string;
+  };
+  features?: Record<string, boolean>;
+}
+
+interface ArgumentRule {
+  rules: Rule[];
+  value: string | string[];
+}
+
+interface LibraryArtifact {
+  path: string;
+  sha1: string;
+  size: number;
+  url: string;
+}
+
+interface Library {
+  name: string;
+  downloads: {
+    artifact?: LibraryArtifact;
+    classifiers?: Record<string, LibraryArtifact>;
+  };
+  natives?: Record<string, string>;
+  rules?: Rule[];
+  extract?: {
+    exclude: string[];
+  };
+}
+
 interface MinecraftVersionInfo {
   id: string;
-  type: string;
+  type: VersionType;
   libraries: Library[];
   mainClass: string;
   minimumLauncherVersion: number;
@@ -21,80 +89,20 @@ interface MinecraftVersionInfo {
     client: Download;
     server?: Download;
   };
-  assetIndex?: {
-    id: string;
-    sha1: string;
-    size: number;
-    totalSize: number;
-    url: string;
-  };
-  logging?: {
-    client: {
-      argument: string;
-      file: {
-        id: string;
-        sha1: string;
-        size: number;
-        url: string;
-      };
-      type: string;
-    };
-  };
+  assetIndex?: AssetIndex;
+  logging?: LoggingConfig;
   arguments?: {
     game: (string | ArgumentRule)[];
     jvm: (string | ArgumentRule)[];
   };
-  minecraftArguments?: string; // Para versiones más antiguas
+  minecraftArguments?: string;
+  inheritsFrom?: string;
+  jar?: string;
 }
 
-interface Download {
-  sha1: string;
-  size: number;
-  url: string;
-}
-
-interface Library {
-  name: string;
-  downloads: {
-    artifact?: {
-      path: string;
-      sha1: string;
-      size: number;
-      url: string;
-    };
-    classifiers?: {
-      [key: string]: {
-        path: string;
-        sha1: string;
-        size: number;
-        url: string;
-      };
-    };
-  };
-  natives?: {
-    [key: string]: string;
-  };
-  rules?: Rule[];
-  extract?: {
-    exclude: string[];
-  };
-}
-
-interface Rule {
-  action: string;
-  os?: {
-    name?: string;
-    arch?: string;
-    version?: string;
-  };
-  features?: {
-    [key: string]: boolean;
-  };
-}
-
-interface ArgumentRule {
-  rules: Rule[];
-  value: string | string[];
+interface Resolution {
+  width: number;
+  height: number;
 }
 
 interface LauncherOptions {
@@ -103,143 +111,50 @@ interface LauncherOptions {
   accessToken: string;
   minecraftDir: string;
   version: string;
-
-  // Opciones de JVM
-  maxMemory?: number; // En MB
-  minMemory?: number; // En MB
-  resolution?: {
-    width: number;
-    height: number;
-  };
-
-  // Opción de modo demo
-  isDemo?: boolean; // Modo demo (por defecto: false)
-
-  // Opciones avanzadas
-  javaPath?: string; // Ruta al ejecutable de Java
-  gameDir?: string; // Directorio del juego (por defecto es .minecraft)
-  assetsDir?: string; // Directorio de assets (por defecto es .minecraft/assets)
+  maxMemory?: number;
+  minMemory?: number;
+  resolution?: Resolution;
+  isDemo?: boolean;
+  javaPath?: string;
+  gameDir?: string;
+  assetsDir?: string;
   isCracked: boolean;
-
-  // Opciones adicionales
   extraJvmArgs?: string[];
   extraGameArgs?: string[];
+  // Nuevas opciones añadidas
+  clientId?: string;
+  xuid?: string;
+  userType?: string;
+  versionType?: string;
+  quickPlayPath?: string;
+  quickPlaySingleplayer?: string;
+  quickPlayMultiplayer?: string;
+  quickPlayRealms?: string;
+  // Opciones para rutas de nativas específicas
+  nativesDir?: string;
 }
 
 export default class NeutronLauncher {
-  private static readonly DEFAULT_JAVA_PATH =
-    NeutronLauncher.getDefaultJavaPath();
+  private static readonly DEFAULT_JAVA_PATH = NeutronLauncher.detectJavaPath();
 
   /**
-   * Obtiene la ruta por defecto de Java según el sistema operativo
+   * Detects default Java path based on current operating system
    */
-  private static getDefaultJavaPath(): string {
+  private static detectJavaPath(): string {
     const platform = os.platform();
 
     if (platform === "win32") {
-      // En Windows, intentamos encontrar Java en Program Files
       const javaHome = process.env.JAVA_HOME;
-      if (javaHome) return path.join(javaHome, "bin", "javaw.exe");
-      return "javaw";
-    } else if (platform === "darwin") {
-      // En macOS
-      return "/usr/bin/java";
-    } else {
-      // En Linux y otros sistemas
-      return "java";
+      return javaHome ? path.join(javaHome, "bin", "javaw.exe") : "javaw";
     }
+
+    return platform === "darwin" ? "/usr/bin/java" : "java";
   }
 
   /**
-   * Carga el archivo JSON de la versión de Minecraft
+   * Gets current OS name in Minecraft format
    */
-  private static async loadVersionInfo(
-    options: LauncherOptions,
-  ): Promise<MinecraftVersionInfo> {
-    const versionPath = path.join(
-      options.minecraftDir,
-      "versions",
-      options.version,
-      `${options.version}.json`,
-    );
-
-    try {
-      const data = await fs.promises.readFile(versionPath, "utf8");
-      return JSON.parse(data);
-    } catch (error) {
-      throw new Error(
-        `No se pudo cargar el archivo JSON de la versión: ${error}`,
-      );
-    }
-  }
-
-  /**
-   * Comprueba si una regla se aplica según el entorno actual
-   */
-  private static checkRule(rule: Rule, options: LauncherOptions): boolean {
-    // Por defecto, si no hay regla, se permite
-    if (!rule) return true;
-
-    let applies = rule.action === "allow";
-
-    // Comprobar reglas de sistema operativo
-    if (rule.os) {
-      const currentOS = NeutronLauncher.getCurrentOS();
-      const currentArch = os.arch();
-
-      if (rule.os.name && rule.os.name !== currentOS) {
-        return rule.action !== "allow";
-      }
-
-      if (rule.os.arch && rule.os.arch !== currentArch) {
-        return rule.action !== "allow";
-      }
-
-      // Comprobación de versión del sistema operativo (más compleja, simplificada aquí)
-      if (rule.os.version) {
-        try {
-          const versionRegex = new RegExp(rule.os.version);
-          if (!versionRegex.test(os.release())) {
-            return rule.action !== "allow";
-          }
-        } catch (e) {
-          // Si hay un error en la expresión regular, ignoramos esta regla
-          console.warn(
-            "Error al verificar la versión del sistema operativo:",
-            e,
-          );
-        }
-      }
-    }
-
-    // Comprobar reglas de características
-    if (rule.features) {
-      // Verificar características específicas
-      if (rule.features.has_custom_resolution !== undefined) {
-        const hasCustomResolution = options.resolution !== undefined;
-        if (rule.features.has_custom_resolution !== hasCustomResolution) {
-          return rule.action !== "allow";
-        }
-      }
-
-      // Importante: Verificar explícitamente si estamos en modo demo
-      if (rule.features.is_demo_user !== undefined) {
-        const isDemoUser = options.isDemo === true;
-        if (rule.features.is_demo_user !== isDemoUser) {
-          return rule.action !== "allow";
-        }
-      }
-
-      // Agregar más verificaciones de características según sea necesario
-    }
-
-    return applies;
-  }
-
-  /**
-   * Obtiene el sistema operativo actual en el formato que espera Minecraft
-   */
-  private static getCurrentOS(): string {
+  private static getCurrentOS(): OSType {
     const platform = os.platform();
     switch (platform) {
       case "win32":
@@ -254,9 +169,146 @@ export default class NeutronLauncher {
   }
 
   /**
-   * Genera el classpath para Minecraft
+   * Checks if a version is considered very old (prior to 1.6)
    */
-  private static async getClasspath(
+  private static isVeryOldVersion(version: string): boolean {
+    try {
+      const match = version.match(/^(\d+)\.(\d+)/);
+      if (!match) return false;
+
+      const major = parseInt(match[1], 10);
+      const minor = parseInt(match[2], 10);
+
+      return (major === 1 && minor < 6) || major === 0;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Checks if a version is newer than 1.20
+   */
+  private static isNewerVersion(version: string): boolean {
+    try {
+      const match = version.match(/^(\d+)\.(\d+)/);
+      if (!match) return false;
+
+      const major = parseInt(match[1], 10);
+      const minor = parseInt(match[2], 10);
+
+      return major > 1 || (major === 1 && minor >= 20);
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Loads and parses Minecraft version info from JSON file
+   */
+  private static async loadVersionInfo(
+    options: LauncherOptions,
+  ): Promise<MinecraftVersionInfo> {
+    const versionPath = path.join(
+      options.minecraftDir,
+      "versions",
+      options.version,
+      `${options.version}.json`,
+    );
+
+    try {
+      const data = await fs.promises.readFile(versionPath, "utf8");
+      const versionInfo: MinecraftVersionInfo = JSON.parse(data);
+
+      // Check if this version inherits from another
+      if (versionInfo.inheritsFrom) {
+        const parentOptions = { ...options, version: versionInfo.inheritsFrom };
+        const parentInfo = await NeutronLauncher.loadVersionInfo(parentOptions);
+        return NeutronLauncher.mergeVersionInfo(parentInfo, versionInfo);
+      }
+
+      return versionInfo;
+    } catch (error) {
+      throw new Error(`Failed to load version JSON file: ${error}`);
+    }
+  }
+
+  /**
+   * Merges parent and child version info
+   */
+  private static mergeVersionInfo(
+    parent: MinecraftVersionInfo,
+    child: MinecraftVersionInfo,
+  ): MinecraftVersionInfo {
+    const result = { ...parent, ...child };
+
+    // Merge libraries
+    if (parent.libraries && child.libraries) {
+      result.libraries = [...parent.libraries, ...child.libraries];
+    }
+
+    return result;
+  }
+
+  /**
+   * Checks if a rule applies based on current environment
+   */
+  private static ruleApplies(rule: Rule, options: LauncherOptions): boolean {
+    if (!rule) return true;
+
+    let applies = rule.action === "allow";
+
+    // Check OS rules
+    if (rule.os) {
+      const currentOS = NeutronLauncher.getCurrentOS();
+      const currentArch = os.arch();
+
+      if (rule.os.name && rule.os.name !== currentOS) {
+        return rule.action !== "allow";
+      }
+
+      if (rule.os.arch && rule.os.arch !== currentArch) {
+        return rule.action !== "allow";
+      }
+
+      // Check OS version using regex if specified
+      if (rule.os.version) {
+        try {
+          const versionRegex = new RegExp(rule.os.version);
+          if (!versionRegex.test(os.release())) {
+            return rule.action !== "allow";
+          }
+        } catch (e) {
+          console.warn("Error checking OS version:", e);
+        }
+      }
+    }
+
+    // Check feature rules
+    if (rule.features) {
+      // Check for custom resolution
+      if (rule.features.has_custom_resolution !== undefined) {
+        const hasCustomResolution = !!options.resolution;
+        if (rule.features.has_custom_resolution !== hasCustomResolution) {
+          return rule.action !== "allow";
+        }
+      }
+
+      // Check demo mode
+      if (rule.features.is_demo_user !== undefined) {
+        const isDemoUser = options.isDemo === true;
+        if (rule.features.is_demo_user !== isDemoUser) {
+          return rule.action !== "allow";
+        }
+      }
+    }
+
+    return applies;
+  }
+
+  /**
+   * Builds classpath for Minecraft
+   */
+  private static async buildClasspath(
     options: LauncherOptions,
     versionInfo: MinecraftVersionInfo,
   ): Promise<string> {
@@ -265,57 +317,91 @@ export default class NeutronLauncher {
     const currentOS = NeutronLauncher.getCurrentOS();
     const currentArch = os.arch();
 
-    // Añadir bibliotecas
+    // Add libraries
     for (const lib of versionInfo.libraries) {
-      // Comprobar reglas de la biblioteca
-      let allowed = true;
-      if (lib.rules) {
-        allowed = lib.rules.some((rule) =>
-          NeutronLauncher.checkRule(rule, options),
-        );
-      }
+      // Check library rules
+      const allowed =
+        !lib.rules ||
+        lib.rules.some((rule) => NeutronLauncher.ruleApplies(rule, options));
 
       if (!allowed) continue;
 
-      // Añadir artefacto principal
-      if (lib.downloads.artifact) {
+      // Add main artifact
+      if (lib.downloads?.artifact) {
         const libPath = path.join(
           options.minecraftDir,
           "libraries",
           lib.downloads.artifact.path,
         );
         libraries.push(libPath);
+      } else if (lib.name) {
+        // Legacy format support
+        const parts = lib.name.split(":");
+        if (parts.length >= 3) {
+          const [group, artifact, version] = parts;
+          const groupPath = group.replace(/\./g, "/");
+          const libPath = path.join(
+            options.minecraftDir,
+            "libraries",
+            groupPath,
+            artifact,
+            version,
+            `${artifact}-${version}.jar`,
+          );
+          libraries.push(libPath);
+        }
       }
 
-      // Añadir nativos si es necesario
+      // Add natives if needed
       if (lib.natives) {
         const nativeKey = lib.natives[currentOS];
-        if (nativeKey && lib.downloads.classifiers) {
-          // Reemplazar ${arch} si es necesario
+        if (nativeKey) {
+          // Replace arch placeholder
           const nativeClassifier = nativeKey.replace(
             "${arch}",
             currentArch === "x64" ? "64" : "32",
           );
-          const nativeArtifact = lib.downloads.classifiers[nativeClassifier];
 
-          if (nativeArtifact) {
-            const nativePath = path.join(
-              options.minecraftDir,
-              "libraries",
-              nativeArtifact.path,
-            );
-            libraries.push(nativePath);
+          // New format with classifiers
+          if (lib.downloads?.classifiers) {
+            const nativeArtifact = lib.downloads.classifiers[nativeClassifier];
+            if (nativeArtifact) {
+              const nativePath = path.join(
+                options.minecraftDir,
+                "libraries",
+                nativeArtifact.path,
+              );
+              libraries.push(nativePath);
+            }
+          }
+          // Legacy format
+          else if (lib.name) {
+            const parts = lib.name.split(":");
+            if (parts.length >= 3) {
+              const [group, artifact, version] = parts;
+              const groupPath = group.replace(/\./g, "/");
+              const libPath = path.join(
+                options.minecraftDir,
+                "libraries",
+                groupPath,
+                artifact,
+                version,
+                `${artifact}-${version}-${nativeClassifier}.jar`,
+              );
+              libraries.push(libPath);
+            }
           }
         }
       }
     }
 
-    // Añadir el jar del cliente
+    // Add client jar
+    const jarName = versionInfo.jar || options.version;
     const clientJar = path.join(
       options.minecraftDir,
       "versions",
-      options.version,
-      `${options.version}.jar`,
+      jarName,
+      `${jarName}.jar`,
     );
     libraries.push(clientJar);
 
@@ -323,136 +409,24 @@ export default class NeutronLauncher {
   }
 
   /**
-   * Procesa los argumentos de la JVM desde el JSON de versión
+   * Replaces argument placeholders with actual values
    */
-  private static processJvmArgs(
-    options: LauncherOptions,
-    versionInfo: MinecraftVersionInfo,
-  ): string[] {
-    const args: string[] = [];
-    const nativesDir = path.join(
-      options.minecraftDir,
-      "natives",
-      options.version,
-    );
-
-    // Configuración de memoria
-    const maxMemory = options.maxMemory || 2048;
-    const minMemory = options.minMemory || 512;
-    args.push(`-Xmx${maxMemory}M`);
-    args.push(`-Xms${minMemory}M`);
-
-    if (options.isCracked) {
-      args.push("-Dminecraft.api.env=custom");
-      args.push("-Dminecraft.api.auth.host=https://invalid.invalid");
-      args.push("-Dminecraft.api.account.host=https://invalid.invalid");
-      args.push("-Dminecraft.api.session.host=https://invalid.invalid");
-      args.push("-Dminecraft.api.services.host=https://invalid.invalid");
-    }
-
-    // Si tenemos argumentos JVM en el JSON (formato nuevo)
-    if (versionInfo.arguments && versionInfo.arguments.jvm) {
-      for (const arg of versionInfo.arguments.jvm) {
-        if (typeof arg === "string") {
-          args.push(
-            NeutronLauncher.replaceArguments(arg, options, versionInfo),
-          );
-        } else if (typeof arg === "object") {
-          // Verificar reglas para argumentos condicionales
-          const ruleApplies = arg.rules.some((rule) =>
-            NeutronLauncher.checkRule(rule, options),
-          );
-          if (ruleApplies) {
-            const values = Array.isArray(arg.value) ? arg.value : [arg.value];
-            for (const value of values) {
-              args.push(
-                NeutronLauncher.replaceArguments(value, options, versionInfo),
-              );
-            }
-          }
-        }
-      }
-    } else {
-      // Formato antiguo o argumentos por defecto
-      args.push("-Djava.library.path=" + nativesDir);
-      args.push("-Dminecraft.launcher.brand=Neutron");
-      args.push("-Dminecraft.launcher.version=1.0");
-      args.push("-cp");
-    }
-
-    // Añadir argumentos JVM adicionales si se proporcionaron
-    if (options.extraJvmArgs && options.extraJvmArgs.length > 0) {
-      args.push(...options.extraJvmArgs);
-    }
-
-    return args;
-  }
-
-  /**
-   * Procesa los argumentos del juego desde el JSON de versión
-   */
-  private static processGameArgs(
-    options: LauncherOptions,
-    versionInfo: MinecraftVersionInfo,
-  ): string[] {
-    const args: string[] = [];
-
-    // Formato nuevo (Minecraft 1.13+)
-    if (versionInfo.arguments && versionInfo.arguments.game) {
-      for (const arg of versionInfo.arguments.game) {
-        if (typeof arg === "string") {
-          args.push(
-            NeutronLauncher.replaceArguments(arg, options, versionInfo),
-          );
-        } else if (typeof arg === "object") {
-          // Verificar reglas para argumentos condicionales usando la función mejorada
-          const ruleApplies = arg.rules.some((rule) =>
-            NeutronLauncher.checkRule(rule, options),
-          );
-          if (ruleApplies) {
-            const values = Array.isArray(arg.value) ? arg.value : [arg.value];
-            for (const value of values) {
-              args.push(
-                NeutronLauncher.replaceArguments(value, options, versionInfo),
-              );
-            }
-          }
-        }
-      }
-    }
-    // Formato antiguo (hasta Minecraft 1.12.2)
-    else if (versionInfo.minecraftArguments) {
-      const minecraftArgs = versionInfo.minecraftArguments.split(" ");
-      for (const arg of minecraftArgs) {
-        // Si estamos procesando el argumento --demo, verificar la opción isDemo
-        if (arg === "--demo" && !options.isDemo) {
-          continue;
-        }
-        args.push(NeutronLauncher.replaceArguments(arg, options, versionInfo));
-      }
-    }
-
-    // Añadir argumentos adicionales del juego si se proporcionaron
-    if (options.extraGameArgs && options.extraGameArgs.length > 0) {
-      args.push(...options.extraGameArgs);
-    }
-
-    return args;
-  }
-
-  /**
-   * Reemplaza las variables en los argumentos con sus valores correspondientes
-   */
-  private static replaceArguments(
+  private static replaceArgs(
     arg: string,
     options: LauncherOptions,
     versionInfo: MinecraftVersionInfo,
+    classpath?: string,
   ): string {
+    // Use specific natives dir if provided, otherwise use default
+    const nativesDir =
+      options.nativesDir ||
+      path.join(options.minecraftDir, "natives", options.version);
+
     const gameDir = options.gameDir || options.minecraftDir;
     const assetsDir =
       options.assetsDir || path.join(options.minecraftDir, "assets");
 
-    const replacements: { [key: string]: string } = {
+    const replacements: Record<string, string> = {
       "${auth_player_name}": options.username,
       "${version_name}": options.version,
       "${game_directory}": gameDir,
@@ -461,24 +435,46 @@ export default class NeutronLauncher {
         versionInfo.assetIndex?.id || versionInfo.assets || "legacy",
       "${auth_uuid}": options.uuid,
       "${auth_access_token}": options.accessToken,
-      "${user_type}": "mojang",
-      "${version_type}": versionInfo.type || "release",
-      "${natives_directory}": path.join(
-        options.minecraftDir,
-        "natives",
-        options.version,
-      ),
+      "${user_type}": options.userType || "mojang",
+      "${version_type}": options.versionType || versionInfo.type || "release",
+      "${natives_directory}": nativesDir,
       "${launcher_name}": "Neutron",
       "${launcher_version}": "1.0",
-      "${classpath}": "${classpath}", // Se reemplazará después
       "${classpath_separator}": os.platform() === "win32" ? ";" : ":",
       "${library_directory}": path.join(options.minecraftDir, "libraries"),
     };
 
-    // Añadir resolución si está definida
+    // Add resolution if defined
     if (options.resolution) {
       replacements["${resolution_width}"] = String(options.resolution.width);
       replacements["${resolution_height}"] = String(options.resolution.height);
+    }
+
+    // Add QuickPlay parameters if they exist
+    if (options.quickPlayPath) {
+      replacements["${quickPlayPath}"] = options.quickPlayPath;
+    }
+    if (options.quickPlaySingleplayer) {
+      replacements["${quickPlaySingleplayer}"] = options.quickPlaySingleplayer;
+    }
+    if (options.quickPlayMultiplayer) {
+      replacements["${quickPlayMultiplayer}"] = options.quickPlayMultiplayer;
+    }
+    if (options.quickPlayRealms) {
+      replacements["${quickPlayRealms}"] = options.quickPlayRealms;
+    }
+
+    // Add client ID and XUID if defined
+    if (options.clientId) {
+      replacements["${clientid}"] = options.clientId;
+    }
+    if (options.xuid) {
+      replacements["${auth_xuid}"] = options.xuid;
+    }
+
+    // Replace classpath with actual value if provided
+    if (classpath) {
+      replacements["${classpath}"] = classpath;
     }
 
     let result = arg;
@@ -492,111 +488,274 @@ export default class NeutronLauncher {
   }
 
   /**
-   * Genera todos los argumentos de comando para lanzar Minecraft
+   * Processes JVM arguments from version info
    */
-  private static async getMinecraftCommand(
+  private static buildJvmArgs(
     options: LauncherOptions,
     versionInfo: MinecraftVersionInfo,
-  ): Promise<string[]> {
-    // Preparar componentes del comando
-    const javaPath = options.javaPath || NeutronLauncher.DEFAULT_JAVA_PATH;
-    const classpath = await NeutronLauncher.getClasspath(options, versionInfo);
-    const jvmArgs = NeutronLauncher.processJvmArgs(options, versionInfo);
-    const mainClass = versionInfo.mainClass;
-    const gameArgs = NeutronLauncher.processGameArgs(options, versionInfo);
+    classpath: string,
+  ): string[] {
+    const args: string[] = [];
 
-    // Construir el comando completo
-    let command: string[] = [javaPath];
-    command = command.concat(jvmArgs);
+    // Use specific natives dir if provided
+    const nativesDir =
+      options.nativesDir ||
+      path.join(options.minecraftDir, "natives", options.version);
 
-    // Si -cp no está en los argumentos de JVM, añadirlo
-    if (!jvmArgs.includes("-cp")) {
-      command.push("-cp");
-      command.push(classpath);
+    // Memory configuration
+    const maxMemory = options.maxMemory || 2048;
+    const minMemory = options.minMemory || 512;
+    args.push(`-Xmx${maxMemory}M`);
+    args.push(`-Xms${minMemory}M`);
+
+    // Add specific natives path as in original command
+    if (NeutronLauncher.isNewerVersion(options.version)) {
+      args.push(`-Djava.library.path=${nativesDir}`);
+      args.push(`-Djna.tmpdir=${nativesDir}`);
+      args.push(`-Dorg.lwjgl.system.SharedLibraryExtractPath=${nativesDir}`);
+      args.push(`-Dio.netty.native.workdir=${nativesDir}`);
+    }
+
+    // Add cracked mode flags
+    if (options.isCracked) {
+      args.push("-Dminecraft.api.env=custom");
+      args.push("-Dminecraft.api.auth.host=https://invalid.invalid");
+      args.push("-Dminecraft.api.account.host=https://invalid.invalid");
+      args.push("-Dminecraft.api.session.host=https://invalid.invalid");
+      args.push("-Dminecraft.api.services.host=https://invalid.invalid");
+    }
+
+    // Process JVM args from version JSON (new format)
+    if (versionInfo.arguments?.jvm) {
+      for (const arg of versionInfo.arguments.jvm) {
+        if (typeof arg === "string") {
+          args.push(
+            NeutronLauncher.replaceArgs(arg, options, versionInfo, classpath),
+          );
+        } else if (typeof arg === "object") {
+          // Check rule conditions
+          const ruleApplies = arg.rules.some((rule) =>
+            NeutronLauncher.ruleApplies(rule, options),
+          );
+
+          if (ruleApplies) {
+            const values = Array.isArray(arg.value) ? arg.value : [arg.value];
+            for (const value of values) {
+              args.push(
+                NeutronLauncher.replaceArgs(
+                  value,
+                  options,
+                  versionInfo,
+                  classpath,
+                ),
+              );
+            }
+          }
+        }
+      }
     } else {
-      // Reemplazar ${classpath} en los argumentos existentes
-      const cpIndex = command.findIndex((arg) => arg === "${classpath}");
-      if (cpIndex !== -1) {
-        command[cpIndex] = classpath;
+      // Default or old format args
+      args.push(`-Djava.library.path=${nativesDir}`);
+      args.push("-Dminecraft.launcher.brand=Neutron");
+      args.push("-Dminecraft.launcher.version=1.0");
+    }
+
+    // Add extra JVM args if provided
+    if (options.extraJvmArgs?.length) {
+      args.push(...options.extraJvmArgs);
+    }
+
+    return args;
+  }
+
+  /**
+   * Processes game arguments from version info
+   */
+  private static buildGameArgs(
+    options: LauncherOptions,
+    versionInfo: MinecraftVersionInfo,
+  ): string[] {
+    const args: string[] = [];
+    const isVeryOldVersion = NeutronLauncher.isVeryOldVersion(versionInfo.id);
+
+    // New format (Minecraft 1.13+)
+    if (versionInfo.arguments?.game) {
+      for (const arg of versionInfo.arguments.game) {
+        if (typeof arg === "string") {
+          args.push(NeutronLauncher.replaceArgs(arg, options, versionInfo));
+        } else if (typeof arg === "object") {
+          const ruleApplies = arg.rules.some((rule) =>
+            NeutronLauncher.ruleApplies(rule, options),
+          );
+
+          if (ruleApplies) {
+            const values = Array.isArray(arg.value) ? arg.value : [arg.value];
+            for (const value of values) {
+              args.push(
+                NeutronLauncher.replaceArgs(value, options, versionInfo),
+              );
+            }
+          }
+        }
+      }
+    }
+    // Old format (up to Minecraft 1.12.2)
+    else if (versionInfo.minecraftArguments) {
+      const minecraftArgs = versionInfo.minecraftArguments.split(" ");
+      for (const arg of minecraftArgs) {
+        // Skip demo arg if not in demo mode
+        if (arg === "--demo" && !options.isDemo) {
+          continue;
+        }
+        args.push(NeutronLauncher.replaceArgs(arg, options, versionInfo));
+      }
+    }
+    // Very old format (pre-1.6)
+    else if (isVeryOldVersion) {
+      args.push(options.username); // Username directly (no --username)
+      // Additional args for very old versions can be added here
+    }
+
+    // Add QuickPlay arguments for newer Minecraft versions (1.20+)
+    if (NeutronLauncher.isNewerVersion(versionInfo.id)) {
+      if (options.quickPlayPath?.length) {
+        args.push("--quickPlayPath");
+        args.push(options.quickPlayPath);
+      }
+      if (options.quickPlaySingleplayer?.length) {
+        args.push("--quickPlaySingleplayer");
+        args.push(options.quickPlaySingleplayer);
+      }
+      if (options.quickPlayMultiplayer?.length) {
+        args.push("--quickPlayMultiplayer");
+        args.push(options.quickPlayMultiplayer);
+      }
+      if (options.quickPlayRealms?.length) {
+        args.push("--quickPlayRealms");
+        args.push(options.quickPlayRealms);
       }
     }
 
-    command.push(mainClass);
-    command = command.concat(gameArgs);
+    // Add extra game args if provided
+    if (options.extraGameArgs?.length) {
+      args.push(...options.extraGameArgs);
+    }
 
+    return args;
+  }
+
+  /**
+   * Builds the complete Minecraft launch command
+   */
+  private static async buildLaunchCommand(
+    options: LauncherOptions,
+    versionInfo: MinecraftVersionInfo,
+  ): Promise<string[]> {
+    const javaPath = options.javaPath || NeutronLauncher.DEFAULT_JAVA_PATH;
+    const classpath = await NeutronLauncher.buildClasspath(
+      options,
+      versionInfo,
+    );
+    const jvmArgs = NeutronLauncher.buildJvmArgs(
+      options,
+      versionInfo,
+      classpath,
+    );
+    const gameArgs = NeutronLauncher.buildGameArgs(options, versionInfo);
+    const isVeryOldVersion = NeutronLauncher.isVeryOldVersion(versionInfo.id);
+
+    // Determine main class
+    let mainClass = versionInfo.mainClass;
+    if (!mainClass) {
+      mainClass = isVeryOldVersion
+        ? "net.minecraft.client.Minecraft"
+        : "net.minecraft.client.main.Main";
+    }
+
+    // Build command
+    const command: string[] = [
+      javaPath,
+      ...jvmArgs,
+      "-cp",
+      classpath,
+      mainClass,
+      ...gameArgs,
+    ];
     return command;
   }
 
   /**
-   * Método auxiliar para convertir el comando en una cadena
+   * Formats launch command as a string
    */
-  private static async getMinecraftCommandString(
+  private static async formatLaunchCommand(
     options: LauncherOptions,
     versionInfo: MinecraftVersionInfo,
   ): Promise<string> {
-    const command = await NeutronLauncher.getMinecraftCommand(
+    const command = await NeutronLauncher.buildLaunchCommand(
       options,
       versionInfo,
     );
     return command
-      .map((arg) => {
-        // Encerrar entre comillas los argumentos que contienen espacios
-        return arg.includes(" ") ? `"${arg}"` : arg;
-      })
+      .map((arg) => (arg.includes(" ") ? `"${arg}"` : arg))
       .join(" ");
   }
 
   /**
-   * Función principal para lanzar una versión de Minecraft
-   * @param options Opciones de lanzamiento para Minecraft
+   * Launches Minecraft with the provided options
    */
   async launchVersion(options: LauncherOptions): Promise<ChildProcess> {
-    // Aplicar valores por defecto a las opciones
-    const processedOptions: LauncherOptions = {
+    // Apply default values
+    const finalOptions: LauncherOptions = {
       ...options,
       maxMemory: options.maxMemory || 2048,
       minMemory: options.minMemory || 512,
-      uuid: options.uuid || v4().toString(),
+      uuid: options.uuid || uuidv4(),
       javaPath: options.javaPath || NeutronLauncher.DEFAULT_JAVA_PATH,
-      gameDir: options.gameDir || path.join(options.minecraftDir),
+      gameDir: options.gameDir || options.minecraftDir,
       assetsDir: options.assetsDir || path.join(options.minecraftDir, "assets"),
-      resolution: {
-        height: options.resolution?.height || 482,
-        width: options.resolution?.width || 856,
+      resolution: options.resolution || {
+        width: 856,
+        height: 482,
       },
-      isDemo: options.isDemo || false, // Valor por defecto de isDemo
-      isCracked: options.isCracked || true,
+      isDemo: !!options.isDemo,
+      isCracked: options.isCracked ?? true,
       extraJvmArgs: options.extraJvmArgs || [],
       extraGameArgs: options.extraGameArgs || [],
+      // Valores por defecto para nuevas opciones
+      nativesDir:
+        options.nativesDir ||
+        `${options.minecraftDir}/natives/${options.version}`,
+      userType: options.userType || "mojang",
+      versionType: options.versionType || "release",
+      clientId: options.clientId || "",
+      xuid: options.xuid || "",
     };
 
     try {
-      // Cargar información de la versión
-      const versionInfo =
-        await NeutronLauncher.loadVersionInfo(processedOptions);
+      // Load version info
+      const versionInfo = await NeutronLauncher.loadVersionInfo(finalOptions);
 
-      // Obtener el comando para lanzar Minecraft
-      const command = await NeutronLauncher.getMinecraftCommandString(
-        processedOptions,
+      // Get formatted command for logging
+      const commandString = await NeutronLauncher.formatLaunchCommand(
+        finalOptions,
         versionInfo,
       );
-      console.log("Comando para lanzar Minecraft:");
-      console.log(command);
+      console.log("Minecraft launch command:", commandString);
 
-      // Ejecutar el comando
-      const args = await NeutronLauncher.getMinecraftCommand(
-        processedOptions,
+      // Execute command
+      const args = await NeutronLauncher.buildLaunchCommand(
+        finalOptions,
         versionInfo,
       );
       const minecraft = spawn(args[0], args.slice(1));
 
       return minecraft;
     } catch (error) {
-      console.error("Error al lanzar Minecraft:", error);
+      console.error("Error launching Minecraft:", error);
       throw error;
     }
   }
 }
 
-// Exportar clases y funciones principales
+// Export types and class
 export { LauncherOptions, MinecraftVersionInfo };

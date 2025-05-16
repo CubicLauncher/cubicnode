@@ -13,7 +13,7 @@ async function main() {
   });
 
   try {
-    const version = "1.9"; // Cambia por la versión que quieras descargar
+    const version = "1.21.5"; // Cambia por la versión que quieras descargar
     await downloader.download(version);
     console.log("Descarga completada con éxito.");
   } catch (error) {

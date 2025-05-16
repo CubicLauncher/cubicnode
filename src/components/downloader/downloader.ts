@@ -3,14 +3,12 @@
  */
 
 import fs from "fs/promises";
-import { createWriteStream, unlinkSync } from "fs";
+import { unlinkSync } from "fs";
 import path from "path";
 import { EventEmitter } from "events";
 import AdmZip from "adm-zip";
-import { Readable } from "stream";
 import { download_file } from "./Utils";
 import { MojangUrls } from "../others/constants";
-import { log } from "console";
 
 const shownNumbers = new Set();
 

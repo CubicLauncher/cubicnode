@@ -10,12 +10,12 @@ export default {
     sourcemap: true,
   },
   plugins: [
-    resolve({ extensions: ['.js', '.ts'] }),
-    commonjs(),
-    typescript({
+      typescript({
       tsconfig: "./tsconfig.json",
       declaration: false,
     }),
+    resolve({ extensions: ['.js', '.ts'] }),
+    commonjs()
   ],
   external: ['child_process', 'events'],
 };

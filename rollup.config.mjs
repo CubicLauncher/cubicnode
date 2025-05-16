@@ -17,5 +17,5 @@ export default {
       declaration: false,
     }),
   ],
-  external: [],
+  external: ['child_process', 'events'],
 };

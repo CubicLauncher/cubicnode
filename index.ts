@@ -5,4 +5,4 @@
 import Downloader from "./src/components/downloader/downloader";
 import NeutronLauncher from "./src/components/launcher/launcher";
 
-export { getVersions, Downloader, NeutronLauncher };
+export { Downloader, NeutronLauncher };

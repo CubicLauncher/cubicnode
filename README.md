@@ -30,53 +30,44 @@ const downloader = new Downloader('./minecraft')
 downloader.download('1.16.5')
 ```
 
+## Eventos del downloader
+Neutron ofrece varios eventos para rastrear el progreso de instalacion de una version, por ahora existen 2.
+
+# downloadFiles
+Este emite que esta descargando el downloader.
+Puede emitir si Natives, Assets o JARs de versiones.
+
+# PercentDownloaded
+Esta devuelve un objeto el cual trae la version y el progreso de instalacion, lo cual es util si manejas muchas descargas.
+
+```JavaScript
+  // Escuchar eventos
+  downloader.on("downloadFiles", (msg) => {
+    console.log(`[Download] ${msg}`);
+  });
+
+  downloader.on("percentDownloaded", (percentage) => {
+    console.log(
+      `[Progress ${percentage.version}] Descargado: ${percentage.percent}%`,
+    );
+  });
+```
+
 ### Lanzar Minecraft
 
 ```javascript
-import Launcher from "../components/launcher/launcher";
+import { NeutronLauncher } from "../../";
 
-const launcher = new Launcher("./minecraft");
+const launcher = new NeutronLauncher();
 
-launcher.on("debug", (data) => console.log(data));
-launcher.launch({
-  username: "santiagolxx", // Ingresa tu nombre de usuario
-  version: "1.16.5", // version a iniciar
-  memory: {
-    // Define la memoria que quieras usar
-    min: 512, // Mínimo de memoria
-    max: 700, // Máximo de memoria
-  },
-  java: {
-    Java17: "/usr/lib/jvm/java-17-openjdk/bin/java",
-    Java8: "/usr/lib/jvm/java-8-openjdk/bin/java",
-  },
-});
-```
-
-### Instancias
-Al iniciar una version se devuelve una clase MinecraftInstance, la cual trae varios metodos
-para operar con la instancia
-```javascript
-import Launcher from 'cubic-neutron';
-
-const launcher = new Launcher('./minecraft');
-
-let instance = launcher.launch({
-  ...
-})
-
-// Mata el proceso de la instancia
-instance.kill()
-
-instance.then((rosca) => {
-  // Obtiene stdout del juego.
-  instance.onOutput((data) => {
-    console.log(data);
-  });
-  // Devuelve el codigo de cierre
-  instance.onClose((data) => {
-    console.log(data);
-  });
+launcher.launchVersion({
+  username: "santiagolxx",
+  uuid: "1234",
+  javaPath: "/usr/lib/jvm/java-21-openjdk/bin/java",
+  accessToken: "1234",
+  minecraftDir: "./minecraft",
+  version: "1.21.5",
+  isCracked: false,
 });
 ```
 
@@ -86,9 +77,6 @@ instance.then((rosca) => {
 
 - `version`: Versión de Minecraft a descargar
 - `path`: Ruta donde se guardarán los archivos
-- `forge`: Versión de Forge a instalar (opcional)
-- `fabric`: Versión de Fabric a instalar (opcional)
-- `optifine`: Versión de Optifine a instalar (opcional)
 
 ### Opciones del Lanzador
 

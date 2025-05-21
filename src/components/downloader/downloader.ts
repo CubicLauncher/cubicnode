@@ -15,7 +15,8 @@ import {
   MinecraftVersionManifest,
   AssetFile,
   VersionInfo,
-} from "../others/constants";
+  DownloadEvent,
+} from "../others/types";
 
 const shownNumbers = new Set();
 
@@ -34,7 +35,7 @@ interface IDownloader {
 
 interface Events {
   downloadFiles: (message: string) => void;
-  percentDownloaded: (percentage: string) => void;
+  percentDownloaded: (percent: DownloadEvent) => void;
 }
 
 type EventName = keyof Events;
@@ -224,7 +225,10 @@ class Downloader implements IDownloader {
               percentage >= 0 &&
               percentage <= 100
             ) {
-              this.emisor.emit("percentDownloaded", `${percentage}`);
+              this.emisor.emit("percentDownloaded", {
+                version: this.version,
+                percent: percentage,
+              } as DownloadEvent);
               shownNumbers.add(percentage);
             }
           }

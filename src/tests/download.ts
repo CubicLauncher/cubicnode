@@ -9,11 +9,13 @@ async function main() {
   });
 
   downloader.on("percentDownloaded", (percentage) => {
-    console.log(`[Progress] Descargado: ${percentage}%`);
+    console.log(
+      `[Progress ${percentage.version}] Descargado: ${percentage.percent}%`,
+    );
   });
 
   try {
-    const version = "1.21.5"; // Cambia por la versión que quieras descargar
+    const version = "1.16.5"; // Cambia por la versión que quieras descargar
     await downloader.download(version);
     console.log("Descarga completada con éxito.");
   } catch (error) {

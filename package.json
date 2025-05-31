@@ -1,6 +1,6 @@
 {
   "name": "cubic-neutron",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Un módulo que permite la descarga y la ejecución de minecraft java con node.js",
   "types": "dist/index.d.ts",
   "type": "module",

@@ -1,3 +1,11 @@
+```diff
+- ⚠️ Este paquete ha quedado obsoleto.
+- Ya no está en mantenimiento ni recibe actualizaciones oficiales.
+- El soporte fue discontinuado debido a problemas en el desarrollo y cambios en las prioridades del proyecto original.
+- No se recomienda su uso en nuevos proyectos o entornos de producción.
+- Sin embargo, una parte funcional de este paquete ha sido preservada y se encuentra disponible como parte del proyecto: https://github.com/CubicLauncher/neox
+- Se recomienda revisar Neox si estás buscando una alternativa relacionada que continúe en desarrollo activo.
+```
 # Cubic Neutron
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
